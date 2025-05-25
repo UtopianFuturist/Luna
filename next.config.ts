@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   output: "export",
+  distDir: "out",
   images: {
     unoptimized: true,
   },

@@ -1,9 +1,10 @@
 "use client";
 
+import React from 'react';
 import { Inter } from 'next/font/google';
-import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import '../globals.css';
+import { AuthProvider } from '../AuthContext';
+import ProtectedRoute from '../ProtectedRoute';
 
 const inter = Inter({ subsets: ['latin'] });
 

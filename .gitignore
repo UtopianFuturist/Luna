@@ -1,3 +1,7 @@
 node_modules
 pnpm-lock.yaml
 /.next
+.next/trace
+/out
+.next/trace
+.DS_Store
