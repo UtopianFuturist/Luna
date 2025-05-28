@@ -1,13 +1,17 @@
 {
-  "client_id": "https://rwghgydn.manus.space/client-metadata.json",
+  "client_id": "https://nsicaeop.manus.space/client-metadata.json",
   "client_name": "BlueShapes",
-  "client_uri": "https://rwghgydn.manus.space",
-  "logo_uri": "https://rwghgydn.manus.space/shapes_logo.jpeg",
-  "redirect_uris": ["https://rwghgydn.manus.space/callback"],
-  "scope": "atproto",
+  "client_uri": "https://nsicaeop.manus.space",
+  "logo_uri": "https://nsicaeop.manus.space/shapes_logo.jpeg",
+  "redirect_uris": ["https://nsicaeop.manus.space/callback"],
+  "scope": "atproto transition:generic",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "token_endpoint_auth_method": "none",
   "application_type": "web",
-  "dpop_bound_access_tokens": true
+  "dpop_bound_access_tokens": true,
+  "subject_type": "public",
+  "tos_uri": "https://nsicaeop.manus.space/terms",
+  "policy_uri": "https://nsicaeop.manus.space/privacy",
+  "jwks_uri": "https://nsicaeop.manus.space/.well-known/jwks.json"
 }

@@ -1,88 +1,79 @@
 "use client";
 
-/**
- * Subject resolver utility for AT Protocol
- * 
- * This module provides functions to parse and normalize BlueSky handles and DIDs,
- * ensuring proper subject resolution for the OAuth flow.
- */
+import React from 'react';
 
-/**
- * Enum representing the type of subject
- */
 export enum SubjectType {
-  DID_METHOD_PLC = 'did_method_plc',
-  DID_METHOD_WEB = 'did_method_web',
-  HOSTNAME = 'hostname'
+  Handle = 'handle',
+  Did = 'did',
+  Unknown = 'unknown'
 }
 
 /**
- * Parse and normalize an input subject (handle or DID)
- * 
- * @param subject - The input subject (handle or DID)
- * @returns The normalized subject and its type
+ * Parses a BlueSky subject (handle or DID) and returns its type and normalized form
  */
-export function parseSubject(subject: string): { type: SubjectType; value: string } {
+export const parseSubject = (subject: string): { type: SubjectType; value: string } => {
   // Clean up the input
-  let cleanSubject = subject.trim();
-  cleanSubject = cleanSubject.replace(/^at:\/\//, '');
-  cleanSubject = cleanSubject.replace(/^@/, '');
-
-  // Check for DID types
-  if (cleanSubject.startsWith('did:plc:')) {
+  const cleaned = subject.trim().toLowerCase();
+  
+  // Check if it's a DID
+  if (cleaned.startsWith('did:plc:')) {
     return {
-      type: SubjectType.DID_METHOD_PLC,
-      value: cleanSubject
-    };
-  } else if (cleanSubject.startsWith('did:web:')) {
-    return {
-      type: SubjectType.DID_METHOD_WEB,
-      value: cleanSubject
+      type: SubjectType.Did,
+      value: cleaned
     };
   }
-
-  // Otherwise, treat as hostname (handle)
+  
+  // Check if it's a handle with @ prefix
+  if (cleaned.startsWith('@')) {
+    return {
+      type: SubjectType.Handle,
+      value: cleaned.substring(1) // Remove the @ prefix
+    };
+  }
+  
+  // Check if it looks like a handle (contains a dot)
+  if (cleaned.includes('.')) {
+    return {
+      type: SubjectType.Handle,
+      value: cleaned
+    };
+  }
+  
+  // If we can't determine, assume it's a handle without domain
   return {
-    type: SubjectType.HOSTNAME,
-    value: cleanSubject
+    type: SubjectType.Handle,
+    value: cleaned
   };
-}
+};
 
 /**
- * Format a subject for display
- * 
- * @param subject - The subject to format
- * @returns Formatted subject for display
+ * Validates if a subject is in a valid format for BlueSky
  */
-export function formatSubjectForDisplay(subject: string): string {
-  const parsed = parseSubject(subject);
+export const isValidSubject = (subject: string): boolean => {
+  const { type, value } = parseSubject(subject);
   
-  if (parsed.type === SubjectType.HOSTNAME) {
-    return `@${parsed.value}`;
+  if (type === SubjectType.Did) {
+    // DIDs should start with did:plc: and have additional characters
+    return value.startsWith('did:plc:') && value.length > 8;
   }
   
-  return parsed.value;
-}
-
-/**
- * Check if a string is a valid BlueSky handle or DID
- * 
- * @param subject - The subject to validate
- * @returns Whether the subject is valid
- */
-export function isValidSubject(subject: string): boolean {
-  const parsed = parseSubject(subject);
-  
-  if (parsed.type === SubjectType.HOSTNAME) {
-    // Basic handle validation - should contain at least one dot
-    return parsed.value.includes('.') && !parsed.value.includes(' ');
-  } else if (
-    parsed.type === SubjectType.DID_METHOD_PLC || 
-    parsed.type === SubjectType.DID_METHOD_WEB
-  ) {
-    // Basic DID validation
-    return parsed.value.length > 10 && !parsed.value.includes(' ');
+  if (type === SubjectType.Handle) {
+    // Handles should either contain a dot (domain) or be at least 3 characters
+    return value.includes('.') || value.length >= 3;
   }
   
   return false;
-}
+};
+
+/**
+ * Formats a subject for display, adding @ prefix to handles if needed
+ */
+export const formatSubjectForDisplay = (subject: string): string => {
+  const { type, value } = parseSubject(subject);
+  
+  if (type === SubjectType.Handle && !value.startsWith('@')) {
+    return `@${value}`;
+  }
+  
+  return value;
+};

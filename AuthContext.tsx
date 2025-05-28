@@ -1,13 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { BrowserOAuthClient, OAuthSession } from '@atproto/oauth-client-browser';
+import { BskyAgent } from '@atproto/api';
+import { parseSubject, SubjectType, isValidSubject, formatSubjectForDisplay } from '@/utils/subjectResolver';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  session: OAuthSession | null;
-  signIn: (handle: string) => Promise<void>;
+  agent: BskyAgent | null;
+  emailLinkLogin: (identifier: string, password: string, authToken?: string) => Promise<{
+    success: boolean;
+    needsEmailToken: boolean;
+    error?: string;
+  }>;
   signOut: () => Promise<void>;
   error: string | null;
 }
@@ -29,92 +34,154 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<OAuthSession | null>(null);
+  const [agent, setAgent] = useState<BskyAgent | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [client, setClient] = useState<BrowserOAuthClient | null>(null);
 
-  // Initialize the OAuth client
+  // Initialize and check for existing session
   useEffect(() => {
-    const initClient = async () => {
+    const initSession = async () => {
       try {
-        // Create the OAuth client
-        const oauthClient = new BrowserOAuthClient({
-          clientMetadata: {
-            client_id: "https://rwghgydn.manus.space/client-metadata.json",
-            client_name: "BlueShapes",
-            client_uri: "https://rwghgydn.manus.space",
-            logo_uri: "https://rwghgydn.manus.space/shapes_logo.jpeg",
-            redirect_uris: ["https://rwghgydn.manus.space/callback"],
-            scope: "atproto",
-            grant_types: ["authorization_code", "refresh_token"],
-            response_types: ["code"],
-            token_endpoint_auth_method: "none",
-            application_type: "web",
-            dpop_bound_access_tokens: true
-          },
-          handleResolver: 'https://bsky.social',
-          responseMode: 'fragment'
-        });
-
-        setClient(oauthClient);
-
-        // Initialize the client and check for existing sessions
-        const result = await oauthClient.init();
+        // Check if we have a stored session
+        const storedSession = localStorage.getItem('blueshapes_session');
         
-        if (result) {
-          const { session: existingSession } = result;
-          setSession(existingSession);
+        if (storedSession) {
+          const sessionData = JSON.parse(storedSession);
+          
+          // Create a new agent
+          const newAgent = new BskyAgent({
+            service: 'https://bsky.social',
+          });
+          
+          // Resume the session
+          await newAgent.resumeSession({
+            did: sessionData.did,
+            handle: sessionData.handle,
+            accessJwt: sessionData.accessJwt,
+            refreshJwt: sessionData.refreshJwt,
+          });
+          
+          setAgent(newAgent);
           setIsAuthenticated(true);
+          console.log('Successfully restored existing session');
         }
       } catch (err) {
-        console.error('Failed to initialize OAuth client:', err);
-        setError('Failed to initialize authentication. Please try again.');
+        console.error('Failed to restore session:', err);
+        // Clear any invalid session data
+        localStorage.removeItem('blueshapes_session');
       } finally {
         setIsLoading(false);
       }
     };
 
-    initClient();
+    initSession();
   }, []);
 
-  const signIn = async (handle: string) => {
-    if (!client) {
-      setError('Authentication system not initialized. Please try again later.');
-      return;
-    }
-
-    setIsLoading(true);
+  const emailLinkLogin = async (identifier: string, password: string, authToken?: string): Promise<{
+    success: boolean;
+    needsEmailToken: boolean;
+    error?: string;
+  }> => {
     setError(null);
 
     try {
-      // Start the OAuth flow with the provided handle
-      await client.startAuthFlow({
-        identifier: handle,
-        state: 'custom-state-value', // Optional state to verify after redirect
+      // Validate the identifier (handle or DID)
+      if (!isValidSubject(identifier)) {
+        throw new Error('Invalid BlueSky handle or DID format');
+      }
+
+      console.log(`Attempting login for ${identifier}${authToken ? ' with auth token' : ''}`);
+
+      // Create a new agent
+      const newAgent = new BskyAgent({
+        service: 'https://bsky.social',
       });
+
+      try {
+        // Login with the provided credentials
+        const result = await newAgent.login({
+          identifier,
+          password,
+          ...(authToken ? { authFactorToken: authToken } : {}),
+        });
+
+        // Store the session data
+        localStorage.setItem('blueshapes_session', JSON.stringify({
+          did: result.data.did,
+          handle: result.data.handle,
+          accessJwt: result.data.accessJwt,
+          refreshJwt: result.data.refreshJwt,
+        }));
+
+        setAgent(newAgent);
+        setIsAuthenticated(true);
+        console.log('Successfully logged in');
+        
+        return {
+          success: true,
+          needsEmailToken: false
+        };
+      } catch (err: any) {
+        console.log('Login error:', err);
+        
+        // Check if this is an auth factor token required error
+        // This is the critical part that needs to be fixed
+        if (
+          err.error === 'AuthFactorTokenRequired' || 
+          (err.message && err.message.includes('auth factor token')) ||
+          (err.status === 401 && err.error === 'InvalidToken') ||
+          (err.status === 401 && err.message && err.message.includes('token'))
+        ) {
+          console.log('Email auth token required - 2FA needed');
+          return {
+            success: false,
+            needsEmailToken: true,
+            error: 'A confirmation code has been sent to your email. Please enter it to continue.'
+          };
+        }
+        
+        // Handle other errors
+        throw err;
+      }
+    } catch (err: any) {
+      console.error('Failed to login:', err);
       
-      // The above function will redirect the user to the OAuth server
-      // The page will reload after the redirect back to our app
-      // The init() function in useEffect will handle the redirect response
-    } catch (err) {
-      console.error('Failed to start auth flow:', err);
-      setError('Failed to authenticate. Please check your handle and try again.');
-      setIsLoading(false);
+      // Additional check for 2FA errors that might be missed
+      if (
+        err.error === 'AuthFactorTokenRequired' || 
+        (err.message && err.message.includes('auth factor token')) ||
+        (err.status === 401 && err.error === 'InvalidToken') ||
+        (err.status === 401 && err.message && err.message.includes('token'))
+      ) {
+        console.log('Caught 2FA requirement in catch block');
+        return {
+          success: false,
+          needsEmailToken: true,
+          error: 'A confirmation code has been sent to your email. Please enter it to continue.'
+        };
+      }
+      
+      const errorMessage = err instanceof Error ? err.message : 'Failed to authenticate';
+      setError(errorMessage);
+      
+      return {
+        success: false,
+        needsEmailToken: false,
+        error: errorMessage
+      };
     }
   };
 
   const signOut = async () => {
-    if (!client) {
-      setError('Authentication system not initialized. Please try again later.');
-      return;
-    }
-
     setIsLoading(true);
     
     try {
-      await client.clearSession();
-      setSession(null);
+      // Clear the stored session
+      localStorage.removeItem('blueshapes_session');
+      
+      // Reset the agent
+      setAgent(null);
       setIsAuthenticated(false);
+      console.log('Successfully signed out');
     } catch (err) {
       console.error('Failed to sign out:', err);
       setError('Failed to sign out. Please try again.');
@@ -128,8 +195,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         isAuthenticated,
         isLoading,
-        session,
-        signIn,
+        agent,
+        emailLinkLogin,
         signOut,
         error
       }}
