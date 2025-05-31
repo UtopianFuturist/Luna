@@ -22,7 +22,10 @@ const availableWidgets = [
   { id: 'bookmarks', name: 'My Bookmarks' },
   { id: 'favoriteYouTubeVideo', name: 'Favorite YouTube Video' },
   { id: 'clockWidget', name: 'Clock' },
-  // Total 18 widgets
+  { id: 'stickyNote', name: 'Sticky Note' },
+  { id: 'countdownTimer', name: 'Countdown Timer' },
+  { id: 'simpleTodoList', name: 'Simple To-Do List' },
+  // Total 21 widgets
 ];
 
 const MAX_WIDGET_SLOTS = 8;

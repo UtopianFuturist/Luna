@@ -149,6 +149,173 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
             <p className="text-gray-300">Sunny</p>
           </div>
         );
+      case 'stickyNote': {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [note, setNote] = useState('');
+        const storageKey = `widget_stickyNote_content`; // Simpler key for single instance assumption
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          if (typeof window !== 'undefined') {
+            const savedNote = localStorage.getItem(storageKey);
+            if (savedNote) {
+              setNote(savedNote);
+            }
+          }
+        }, [storageKey]);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(storageKey, note);
+          }
+        }, [note, storageKey]);
+
+        return (
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full h-full bg-yellow-200 text-yellow-900 p-2 rounded-md resize-none focus:ring-1 focus:ring-yellow-400 placeholder-yellow-700"
+            placeholder="Write a note..."
+            style={{ minHeight: '120px' }} // Ensure textarea has a decent default height
+          />
+        );
+      }
+      case 'countdownTimer': {
+        const lsTitleKey = `widget_countdownTitle_${widgetId}`;
+        const lsTargetDateKey = `widget_countdownTargetDate_${widgetId}`;
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [title, setTitle] = useState(() => {
+          if (typeof window !== 'undefined') {
+            return localStorage.getItem(lsTitleKey) || "New Year's Eve";
+          }
+          return "New Year's Eve";
+        });
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [targetDateStr, setTargetDateStr] = useState(() => {
+           if (typeof window !== 'undefined') {
+            return localStorage.getItem(lsTargetDateKey) || new Date(new Date().getFullYear() + 1, 0, 1).toISOString().slice(0, 16); // Next New Year
+          }
+          return new Date(new Date().getFullYear() + 1, 0, 1).toISOString().slice(0, 16);
+        });
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [timeLeft, setTimeLeft] = useState('');
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          localStorage.setItem(lsTitleKey, title);
+        }, [title, lsTitleKey]);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          localStorage.setItem(lsTargetDateKey, targetDateStr);
+        }, [targetDateStr, lsTargetDateKey]);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          const calculateTimeLeft = () => {
+            const difference = +new Date(targetDateStr) - +new Date();
+            let newTimeLeft = '';
+
+            if (difference > 0) {
+              const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+              const minutes = Math.floor((difference / 1000 / 60) % 60);
+              const seconds = Math.floor((difference / 1000) % 60);
+              newTimeLeft = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            } else {
+              newTimeLeft = "Countdown finished!";
+            }
+            setTimeLeft(newTimeLeft);
+          };
+
+          calculateTimeLeft(); // Initial calculation
+          const timer = setInterval(calculateTimeLeft, 1000);
+          return () => clearInterval(timer);
+        }, [targetDateStr]);
+
+        return (
+          <div className="text-center p-2 space-y-2">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Countdown Title"
+              className="w-full p-1 bg-gray-700 text-white rounded-md text-sm mb-1 focus:ring-1 focus:ring-blue-500"
+            />
+            <input
+              type="datetime-local"
+              value={targetDateStr}
+              onChange={(e) => setTargetDateStr(e.target.value)}
+              className="w-full p-1 bg-gray-700 text-white rounded-md text-sm mb-2 focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="text-xl font-semibold text-gray-100 truncate" title={title}>{title}</p>
+            <p className="text-2xl font-mono text-green-400">{timeLeft}</p>
+          </div>
+        );
+      }
+      case 'simpleTodoList': {
+        interface TodoItem { id: number; text: string; completed: boolean; }
+        const lsTodoKey = `widget_todoItems_${widgetId}`;
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [todos, setTodos] = useState<TodoItem[]>(() => {
+          if (typeof window !== 'undefined') {
+            const savedTodos = localStorage.getItem(lsTodoKey);
+            return savedTodos ? JSON.parse(savedTodos) : [];
+          }
+          return [];
+        });
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [newTodoText, setNewTodoText] = useState('');
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          localStorage.setItem(lsTodoKey, JSON.stringify(todos));
+        }, [todos, lsTodoKey]);
+
+        const handleAddTodo = () => {
+          if (newTodoText.trim() === '') return;
+          setTodos([...todos, { id: Date.now(), text: newTodoText, completed: false }]);
+          setNewTodoText('');
+        };
+
+        const toggleComplete = (id: number) => {
+          setTodos(todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
+        };
+
+        const deleteTodo = (id: number) => {
+          setTodos(todos.filter(todo => todo.id !== id));
+        };
+
+        return (
+          <div className="flex flex-col h-full">
+            <div className="flex mb-2">
+              <input
+                type="text"
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+                placeholder="Add a new task..."
+                className="flex-grow p-1.5 bg-gray-700 text-white rounded-l-md text-sm focus:ring-1 focus:ring-blue-500"
+                onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
+              />
+              <button onClick={handleAddTodo} className="bg-blue-500 text-white px-3 py-1.5 rounded-r-md text-sm hover:bg-blue-600">Add</button>
+            </div>
+            <ul className="space-y-1.5 overflow-y-auto flex-grow" style={{maxHeight: '100px'}}> {/* Max height for scroll */}
+              {todos.map(todo => (
+                <li key={todo.id} className={`flex items-center justify-between p-1.5 rounded-md text-sm ${todo.completed ? 'bg-green-800' : 'bg-gray-600'}`}>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" checked={todo.completed} onChange={() => toggleComplete(todo.id)} className="form-checkbox text-green-500 bg-gray-700 border-gray-500 rounded"/>
+                    <span className={`${todo.completed ? 'line-through text-gray-400' : 'text-gray-200'}`}>{todo.text}</span>
+                  </label>
+                  <button onClick={() => deleteTodo(todo.id)} className="text-red-500 hover:text-red-400 text-xs">Delete</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
       // Add more cases as actual widget implementations are developed
       default:
         return <p className="text-red-400">Unknown Widget Type: {widgetId}</p>;

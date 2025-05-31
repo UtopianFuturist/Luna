@@ -31,6 +31,13 @@ const categorizedLinks = [
       { name: "Paypal", url: "https://paypal.com" },
     ],
   },
+  {
+    category: "BlueSky Tools",
+    links: [
+      { name: "ClearSky", url: "https://clearsky.app.placeholder" },
+      { name: "Graze Feed Builder", url: "https://graze.placeholder.url" }
+    ]
+  }
 ];
 
 const BrowserPage: React.FC = () => {

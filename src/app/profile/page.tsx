@@ -24,6 +24,9 @@ const availableWidgetsList = [
   { id: 'bookmarks', name: 'My Bookmarks' },
   { id: 'favoriteYouTubeVideo', name: 'Favorite YouTube Video' },
   { id: 'clockWidget', name: 'Clock' },
+  { id: 'stickyNote', name: 'Sticky Note' },
+  { id: 'countdownTimer', name: 'Countdown Timer' },
+  { id: 'simpleTodoList', name: 'Simple To-Do List' },
 ];
 
 const MAX_WIDGET_SLOTS_TOTAL = 8; // Total slots in the layout
