@@ -4,7 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, Search, Bell, MessageCircle, User, Settings, Globe, X } from 'lucide-react';
+import { Home, Search, Bell, MessageCircle, User, Settings, Globe, X, LayoutGrid } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -140,6 +140,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 >
                   <Globe size={20} className="mr-4" />
                   <span>Browser</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/settings/widget-board"
+                  className="flex items-center px-4 py-3 text-white hover:bg-gray-800"
+                  onClick={onClose}
+                >
+                  <LayoutGrid size={20} className="mr-4" />
+                  <span>Widget Settings</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/settings/profile"
+                  className="flex items-center px-4 py-3 text-white hover:bg-gray-800"
+                  onClick={onClose}
+                >
+                  <User size={20} className="mr-4" /> {/* Reusing User icon */}
+                  <span>Profile Settings</span>
                 </Link>
               </li>
               <li>
