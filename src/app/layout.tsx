@@ -4,6 +4,7 @@ import React from 'react';
 import { Inter } from 'next/font/google';
 import '../globals.css';
 import { AuthProvider } from '../AuthContext';
+import { BrowserAudioProvider } from '../contexts/BrowserAudioContext'; // Adjust path as needed
 import ProtectedRoute from '../ProtectedRoute';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -17,9 +18,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <ProtectedRoute>
-            {children}
-          </ProtectedRoute>
+          <BrowserAudioProvider>
+            <ProtectedRoute>
+              {children}
+            </ProtectedRoute>
+          </BrowserAudioProvider>
         </AuthProvider>
       </body>
     </html>

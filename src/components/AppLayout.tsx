@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { BrowserAudioContext } from '../contexts/BrowserAudioContext'; // Adjust path if needed
 import UserMenu from './UserMenu';
 
 interface AppLayoutProps {
@@ -24,6 +25,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const { isAuthenticated, session } = useAuth();
+  const browserAudioCtx = useContext(BrowserAudioContext);
+
+  if (!browserAudioCtx) {
+    // This should not happen if provider is correctly placed at the root
+    return <div>Error: BrowserAudioContext not found.</div>;
+  }
+  const { audioUrl, isPlaying } = browserAudioCtx;
   
   // Hide bottom tab bar on welcome, signin, and account creation pages
   const hideTabBar = ['/welcome', '/signin', '/create-account', '/callback'].includes(pathname);
@@ -94,6 +102,37 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             </Link>
           </div>
         </nav>
+      )}
+
+      {/* Persistent Audio Iframe */}
+      {audioUrl && (
+        <iframe
+          src={audioUrl}
+          style={
+            pathname === '/browser' && isPlaying
+              ? { // Visible style (example: small banner at bottom)
+                  position: 'fixed',
+                  bottom: '50px', // Adjust to not overlap main nav if main nav is at bottom
+                  left: '0',
+                  width: '100%',
+                  height: '60px', // Small height for a mini-player like experience
+                  border: 'none',
+                  zIndex: 100, // Ensure it's above other content but below modals if any
+                  backgroundColor: '#222', // Dark background for the player
+                }
+              : { // Hidden but active style
+                  position: 'absolute',
+                  left: '-9999px',
+                  top: '-9999px',
+                  width: '1px',
+                  height: '1px',
+                  border: 'none',
+                }
+          }
+          title="Persistent Audio Player"
+          allow="autoplay; encrypted-media; picture-in-picture" // picture-in-picture might be useful for video
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+        />
       )}
     </div>
   );

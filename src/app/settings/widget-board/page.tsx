@@ -25,7 +25,15 @@ const availableWidgets = [
   { id: 'stickyNote', name: 'Sticky Note' },
   { id: 'countdownTimer', name: 'Countdown Timer' },
   { id: 'simpleTodoList', name: 'Simple To-Do List' },
-  // Total 21 widgets
+  { id: 'digitalBookshelf', name: 'Digital Bookshelf' },
+  { id: 'recipeOfTheDay', name: 'Recipe of the Day' },
+  { id: 'askMeAnythingBox', name: 'Ask Me Anything Box' },
+  { id: 'guestbook', name: 'Guestbook' },
+  { id: 'miniPoll', name: 'Mini Poll' },
+  { id: 'githubProjectShowcase', name: 'GitHub Projects' },
+  { id: 'artGallerySnippet', name: 'Art Gallery Snippet' },
+  { id: 'deviceBattery', name: 'Device Battery' },
+  // Total 29 widgets
 ];
 
 const MAX_WIDGET_SLOTS = 8;
