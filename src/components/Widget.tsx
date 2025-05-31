@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Music, Users, Image as ImageIcon, Sun, BookOpen, UtensilsCrossed, HelpCircle,
   Github, Palette, MessageSquare, Send, CheckSquare, Trash2,
-  BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, PlusCircle, LinkOff, Link as LinkIcon, Pin, HelpCircle as HelpCircleIcon // Added HelpCircle for battery loading
+  BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, PlusCircle, LinkOff, Link as LinkIcon, Pin, HelpCircle as HelpCircleIcon,
+  CalendarDays, TrendingUp, TrendingDown, Minus // Added new icons
 } from 'lucide-react';
 
 interface WidgetProps {
@@ -50,6 +51,55 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
           </div>
         );
       }
+      case 'calendarEvents': { // Was 'upcomingEvents' in prompt, using 'calendarEvents' from list
+        const events = [
+          { title: "Team Meeting", dateTime: "Oct 26, 10:00 AM", location: "Conf Room 1" },
+          { title: "Project Deadline", dateTime: "Oct 28, 5:00 PM", description: "Submit Phase 1 deliverables." },
+          { title: "Lunch with Client", dateTime: "Nov 2, 12:30 PM", location: "The Cafe" },
+        ];
+        return (
+          <div className="space-y-2 text-sm">
+            {events.slice(0, 3).map((event, index) => (
+              <div key={index} className="p-2 bg-gray-700/50 rounded-md">
+                <div className="flex items-center text-gray-200 mb-0.5">
+                  <CalendarDays size={14} className="mr-2 text-purple-400 flex-shrink-0" />
+                  <p className="font-semibold truncate">{event.title}</p>
+                </div>
+                <p className="text-xs text-gray-400 ml-6">{event.dateTime}</p>
+                {event.location && <p className="text-xs text-gray-400 ml-6 truncate">Location: {event.location}</p>}
+                {event.description && <p className="text-xs text-gray-400 ml-6 truncate">{event.description}</p>}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      case 'stockTicker': {
+        const stocks = [
+          { symbol: "AAPL", price: "$175.50", change: "+0.75 (0.43%)", trend: "up" },
+          { symbol: "GOOGL", price: "$130.20", change: "-0.15 (0.11%)", trend: "down" },
+          { symbol: "MSFT", price: "$330.00", change: "0.00 (0.00%)", trend: "flat" },
+        ];
+        return (
+          <div className="space-y-1.5 text-sm">
+            {stocks.map(stock => (
+              <div key={stock.symbol} className="flex items-center justify-between p-1.5 bg-gray-700/50 rounded-md">
+                <div className="flex items-center">
+                  <span className="font-semibold text-gray-200 w-14 truncate" title={stock.symbol}>{stock.symbol}</span>
+                  {stock.trend === 'up' && <TrendingUp size={16} className="text-green-500 ml-1 mr-1 flex-shrink-0" />}
+                  {stock.trend === 'down' && <TrendingDown size={16} className="text-red-500 ml-1 mr-1 flex-shrink-0" />}
+                  {stock.trend === 'flat' && <Minus size={16} className="text-gray-500 ml-1 mr-1 flex-shrink-0" />}
+                </div>
+                <span className="text-gray-300 text-xs w-16 text-right">{stock.price}</span>
+                <span className={`text-xs w-20 text-right ${
+                  stock.trend === 'up' ? 'text-green-500' : stock.trend === 'down' ? 'text-red-500' : 'text-gray-400'
+                }`}>
+                  {stock.change}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      }
       case 'quoteOfTheDay': {
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [quoteText, setQuoteText] = useState("No quote set.");
@@ -89,72 +139,33 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
           </div>
         );
       case 'quickLinks': {
-        interface LinkItem { id: number; name: string; url: string; }
+        interface LinkItem { id: number; name: string; url: string; } // id can be string if Date.now().toString()
         const lsLinksKey = `widgetContent_quickLinks_links_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [userLinks, setUserLinks] = useState<LinkItem[]>(() => {
-          if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem(lsLinksKey);
-            return saved ? JSON.parse(saved) : [];
-          }
-          return [];
-        });
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [newLinkName, setNewLinkName] = useState('');
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [newLinkUrl, setNewLinkUrl] = useState('');
+        const [linksToDisplay, setLinksToDisplay] = useState<LinkItem[]>([]);
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
-          localStorage.setItem(lsLinksKey, JSON.stringify(userLinks));
-        }, [userLinks, lsLinksKey]);
-
-        const handleAddLink = () => {
-          if (newLinkName.trim() === '' || newLinkUrl.trim() === '') return;
-          // Basic URL validation (starts with http/https)
-          if (!newLinkUrl.startsWith('http://') && !newLinkUrl.startsWith('https://')) {
-            alert('Please enter a valid URL (starting with http:// or https://)');
-            return;
+          if (typeof window !== 'undefined') {
+            const savedLinks = localStorage.getItem(lsLinksKey);
+            setLinksToDisplay(savedLinks ? JSON.parse(savedLinks) : []);
           }
-          setUserLinks([...userLinks, { id: Date.now(), name: newLinkName, url: newLinkUrl }]);
-          setNewLinkName('');
-          setNewLinkUrl('');
-        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [instanceId]); // Rerun if instanceId changes, lsLinksKey is derived
 
-        const handleDeleteLink = (id: number) => {
-          setUserLinks(userLinks.filter(link => link.id !== id));
-        };
+        if (linksToDisplay.length === 0) {
+          return <p className="text-gray-400 text-xs italic text-center">No links configured. Set them in Widget Board settings.</p>;
+        }
 
         return (
           <div className="flex flex-col h-full text-sm">
-            <div className="mb-2 space-y-1">
-              <input
-                type="text"
-                placeholder="Link Name (e.g., Portfolio)"
-                value={newLinkName}
-                onChange={(e) => setNewLinkName(e.target.value)}
-                className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500 text-xs"
-              />
-              <input
-                type="url"
-                placeholder="URL (e.g., https://example.com)"
-                value={newLinkUrl}
-                onChange={(e) => setNewLinkUrl(e.target.value)}
-                className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500 text-xs"
-              />
-              <button onClick={handleAddLink} className="w-full bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-500 flex items-center justify-center space-x-1 text-xs">
-                <PlusCircle size={14}/>
-                <span>Add Link</span>
-              </button>
-            </div>
-            <ul className="space-y-1 overflow-y-auto flex-grow" style={{maxHeight: '85px'}}> {/* Adjusted maxHeight slightly */}
-              {userLinks.length === 0 && <p className="text-gray-400 text-xs italic text-center mt-2">No links added yet.</p>}
-              {userLinks.map(link => (
-                <li key={link.id} className="flex items-center justify-between p-1.5 bg-gray-700 rounded-md">
+            <ul className="space-y-1 overflow-y-auto flex-grow" style={{maxHeight: '140px'}}> {/* Increased maxHeight for display-only */}
+              {linksToDisplay.map(link => (
+                <li key={link.id} className="p-1.5 bg-gray-700 rounded-md">
                   <a
                     href={link.url}
-                    className="text-blue-400 hover:text-blue-300 hover:underline truncate flex-1 text-xs mr-2 flex items-center"
+                    className="text-blue-400 hover:text-blue-300 hover:underline truncate flex items-center"
                     target="_blank"
                     rel="noopener noreferrer"
                     title={link.url}
@@ -162,9 +173,6 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
                     <LinkIcon size={12} className="mr-1.5 text-gray-500 flex-shrink-0"/>
                     {link.name}
                   </a>
-                  <button onClick={() => handleDeleteLink(link.id)} className="text-red-500 hover:text-red-400 p-0.5">
-                    <Trash2 size={14}/>
-                  </button>
                 </li>
               ))}
             </ul>
@@ -302,36 +310,29 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
       case 'countdownTimer': {
         const lsTitleKey = `widgetContent_countdownTitle_${instanceId}`;
         const lsTargetDateKey = `widgetContent_countdownTargetDate_${instanceId}`;
+        const defaultTitle = "Countdown";
+        const defaultDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16); // One week from now
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [title, setTitle] = useState(() => {
-          if (typeof window !== 'undefined') {
-            return localStorage.getItem(lsTitleKey) || "New Year's Eve";
-          }
-          return "New Year's Eve";
-        });
+        const [title, setTitle] = useState(defaultTitle);
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [targetDateStr, setTargetDateStr] = useState(() => {
-           if (typeof window !== 'undefined') {
-            return localStorage.getItem(lsTargetDateKey) || new Date(new Date().getFullYear() + 1, 0, 1).toISOString().slice(0, 16); // Next New Year
-          }
-          return new Date(new Date().getFullYear() + 1, 0, 1).toISOString().slice(0, 16);
-        });
+        const [targetDateStr, setTargetDateStr] = useState(defaultDate);
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [timeLeft, setTimeLeft] = useState('');
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        useEffect(() => {
-          if (typeof window !== 'undefined') localStorage.setItem(lsTitleKey, title);
-        }, [title, lsTitleKey]);
+        useEffect(() => { // Load data from localStorage
+          if (typeof window !== 'undefined') {
+            const savedTitle = localStorage.getItem(lsTitleKey);
+            const savedTargetDate = localStorage.getItem(lsTargetDateKey);
+            setTitle(savedTitle || defaultTitle);
+            setTargetDateStr(savedTargetDate || defaultDate);
+          }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [instanceId]); // Rerun if instanceId changes (e.g. widget replaced in same slot)
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        useEffect(() => {
-          if (typeof window !== 'undefined') localStorage.setItem(lsTargetDateKey, targetDateStr);
-        }, [targetDateStr, lsTargetDateKey]);
-
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        useEffect(() => {
+        useEffect(() => { // Calculate time left
           const calculateTimeLeft = () => {
             const difference = +new Date(targetDateStr) - +new Date();
             let newTimeLeft = '';
@@ -355,20 +356,7 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
 
         return (
           <div className="text-center p-2 space-y-2">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Countdown Title"
-              className="w-full p-1 bg-gray-700 text-white rounded-md text-sm mb-1 focus:ring-1 focus:ring-blue-500"
-            />
-            <input
-              type="datetime-local"
-              value={targetDateStr}
-              onChange={(e) => setTargetDateStr(e.target.value)}
-              className="w-full p-1 bg-gray-700 text-white rounded-md text-sm mb-2 focus:ring-1 focus:ring-blue-500"
-            />
-            <p className="text-xl font-semibold text-gray-100 truncate" title={title}>{title}</p>
+            <p className="text-md font-semibold text-gray-100 truncate" title={title}>{title}</p>
             <p className="text-2xl font-mono text-green-400">{timeLeft}</p>
           </div>
         );

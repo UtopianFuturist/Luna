@@ -65,6 +65,16 @@ const WidgetBoardSettingsPage: React.FC = () => {
   const [currentStatusText, setCurrentStatusText] = useState('');
   const [currentMoodEmoji, setCurrentMoodEmoji] = useState('');
 
+  // State for the countdown timer form within the modal
+  const [currentCountdownTitle, setCurrentCountdownTitle] = useState('');
+  const [currentCountdownTargetDate, setCurrentCountdownTargetDate] = useState('');
+
+  // State for the Quick Links form within the modal
+  interface QuickLinkModalItem { id: string; name: string; url: string; }
+  const [currentQuickLinksList, setCurrentQuickLinksList] = useState<QuickLinkModalItem[]>([]);
+  const [newQuickLinkName, setNewQuickLinkName] = useState('');
+  const [newQuickLinkUrl, setNewQuickLinkUrl] = useState('');
+
 
   // Load and Save configuredWidgets
   useEffect(() => {
@@ -318,6 +328,37 @@ const WidgetBoardSettingsPage: React.FC = () => {
                           Set Mood
                         </button>
                        )}
+                       {cw.widgetId === 'countdownTimer' && (
+                        <button
+                          onClick={() => {
+                            setEditingContentWidget(cw);
+                            const titleKey = `widgetContent_countdownTitle_${cw.instanceId}`;
+                            const dateKey = `widgetContent_countdownTargetDate_${cw.instanceId}`;
+                            setCurrentCountdownTitle(localStorage.getItem(titleKey) || 'My Countdown');
+                            setCurrentCountdownTargetDate(localStorage.getItem(dateKey) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)); // Default to one week from now
+                            setIsContentModalOpen(true);
+                          }}
+                          className="text-xs bg-cyan-500 hover:bg-cyan-600 px-2 py-1 rounded ml-1"
+                        >
+                          Set Timer
+                        </button>
+                       )}
+                       {cw.widgetId === 'quickLinks' && (
+                        <button
+                          onClick={() => {
+                            setEditingContentWidget(cw);
+                            const linksKey = `widgetContent_quickLinks_links_${cw.instanceId}`;
+                            const savedLinks = localStorage.getItem(linksKey);
+                            setCurrentQuickLinksList(savedLinks ? JSON.parse(savedLinks) : []);
+                            setNewQuickLinkName('');
+                            setNewQuickLinkUrl('');
+                            setIsContentModalOpen(true);
+                          }}
+                          className="text-xs bg-lime-500 hover:bg-lime-600 px-2 py-1 rounded ml-1"
+                        >
+                          Manage Links
+                        </button>
+                       )}
                        <button onClick={() => handleRemoveWidget(cw.instanceId)} className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded ml-1">Remove</button>
                     </div>
                   </div>
@@ -373,97 +414,111 @@ const WidgetBoardSettingsPage: React.FC = () => {
             }}
             title={`Set Content for: ${getWidgetNameById(editingContentWidget.widgetId)}`}
           >
-            {/* Content for Quote of the Day */}
+            {/* ... existing forms for quote and mood ... */}
             {editingContentWidget.widgetId === 'quoteOfTheDay' && (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="quoteText" className="block text-sm font-medium text-gray-300 mb-1">Quote Text:</label>
-                  <textarea
-                    id="quoteText"
-                    value={currentQuoteText}
-                    onChange={(e) => setCurrentQuoteText(e.target.value)}
-                    rows={3}
-                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
-                    placeholder="Enter the quote"
-                  />
+                  <label htmlFor="quoteTextModal" className="block text-sm font-medium text-gray-300 mb-1">Quote Text:</label>
+                  <textarea id="quoteTextModal" value={currentQuoteText} onChange={(e) => setCurrentQuoteText(e.target.value)} rows={3} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="Enter the quote"/>
                 </div>
                 <div>
-                  <label htmlFor="quoteAuthor" className="block text-sm font-medium text-gray-300 mb-1">Author:</label>
-                  <input
-                    type="text"
-                    id="quoteAuthor"
-                    value={currentQuoteAuthor}
-                    onChange={(e) => setCurrentQuoteAuthor(e.target.value)}
-                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
-                    placeholder="Enter the author's name"
-                  />
+                  <label htmlFor="quoteAuthorModal" className="block text-sm font-medium text-gray-300 mb-1">Author:</label>
+                  <input type="text" id="quoteAuthorModal" value={currentQuoteAuthor} onChange={(e) => setCurrentQuoteAuthor(e.target.value)} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="Enter the author's name"/>
                 </div>
-                <button
-                  onClick={() => {
-                    if (editingContentWidget) {
-                      const textKey = `widgetContent_quoteText_${editingContentWidget.instanceId}`;
-                      const authorKey = `widgetContent_quoteAuthor_${editingContentWidget.instanceId}`;
-                      localStorage.setItem(textKey, currentQuoteText);
-                      localStorage.setItem(authorKey, currentQuoteAuthor);
-                      alert("Quote saved successfully!");
-                      setIsContentModalOpen(false);
-                      setEditingContentWidget(null);
-                    }
-                  }}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold"
-                >
-                  Save Quote
-                </button>
+                <button onClick={() => { if (editingContentWidget) { localStorage.setItem(`widgetContent_quoteText_${editingContentWidget.instanceId}`, currentQuoteText); localStorage.setItem(`widgetContent_quoteAuthor_${editingContentWidget.instanceId}`, currentQuoteAuthor); alert("Quote saved!"); setIsContentModalOpen(false); setEditingContentWidget(null); } }} className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold">Save Quote</button>
               </div>
             )}
 
-            {/* Content for Mood/Status */}
             {editingContentWidget.widgetId === 'moodStatus' && (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="statusText" className="block text-sm font-medium text-gray-300 mb-1">Status Text:</label>
-                  <input
-                    type="text"
-                    id="statusText"
-                    value={currentStatusText}
-                    onChange={(e) => setCurrentStatusText(e.target.value)}
-                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
-                    placeholder="How are you feeling?"
-                  />
+                  <label htmlFor="statusTextModal" className="block text-sm font-medium text-gray-300 mb-1">Status Text:</label>
+                  <input type="text" id="statusTextModal" value={currentStatusText} onChange={(e) => setCurrentStatusText(e.target.value)} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="How are you feeling?"/>
                 </div>
                 <div>
-                  <label htmlFor="moodEmoji" className="block text-sm font-medium text-gray-300 mb-1">Mood Emoji:</label>
-                  <input
-                    type="text"
-                    id="moodEmoji"
-                    value={currentMoodEmoji}
-                    onChange={(e) => setCurrentMoodEmoji(e.target.value)}
-                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
-                    placeholder="Enter an emoji (e.g., 😊)"
-                    maxLength={5} // Allow for emoji sequences
-                  />
+                  <label htmlFor="moodEmojiModal" className="block text-sm font-medium text-gray-300 mb-1">Mood Emoji:</label>
+                  <input type="text" id="moodEmojiModal" value={currentMoodEmoji} onChange={(e) => setCurrentMoodEmoji(e.target.value)} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="Enter an emoji (e.g., 😊)" maxLength={5} />
+                </div>
+                <button onClick={() => { if (editingContentWidget) { localStorage.setItem(`widgetContent_statusText_${editingContentWidget.instanceId}`, currentStatusText); localStorage.setItem(`widgetContent_moodEmoji_${editingContentWidget.instanceId}`, currentMoodEmoji); alert("Mood/Status saved!"); setIsContentModalOpen(false); setEditingContentWidget(null); } }} className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-md font-semibold">Save Mood/Status</button>
+              </div>
+            )}
+
+            {editingContentWidget.widgetId === 'countdownTimer' && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="countdownTitleModal" className="block text-sm font-medium text-gray-300 mb-1">Countdown Title:</label>
+                  <input type="text" id="countdownTitleModal" value={currentCountdownTitle} onChange={(e) => setCurrentCountdownTitle(e.target.value)} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="e.g., New Year's Eve"/>
+                </div>
+                <div>
+                  <label htmlFor="countdownTargetDateModal" className="block text-sm font-medium text-gray-300 mb-1">Target Date & Time:</label>
+                  <input type="datetime-local" id="countdownTargetDateModal" value={currentCountdownTargetDate} onChange={(e) => setCurrentCountdownTargetDate(e.target.value)} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
+                </div>
+                <button onClick={() => { if (editingContentWidget) { localStorage.setItem(`widgetContent_countdownTitle_${editingContentWidget.instanceId}`, currentCountdownTitle); localStorage.setItem(`widgetContent_countdownTargetDate_${editingContentWidget.instanceId}`, currentCountdownTargetDate); alert("Timer saved!"); setIsContentModalOpen(false); setEditingContentWidget(null); } }} className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-md font-semibold">Save Timer</button>
+              </div>
+            )}
+
+            {/* Content for Quick Links */}
+            {editingContentWidget.widgetId === 'quickLinks' && (
+              <div className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <label htmlFor="newLinkNameModal" className="block text-xs font-medium text-gray-300">Link Name:</label>
+                  <input type="text" id="newLinkNameModal" value={newQuickLinkName} onChange={(e) => setNewQuickLinkName(e.target.value)} placeholder="e.g., My Portfolio" className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="newLinkUrlModal" className="block text-xs font-medium text-gray-300">Link URL:</label>
+                  <input type="url" id="newLinkUrlModal" value={newQuickLinkUrl} onChange={(e) => setNewQuickLinkUrl(e.target.value)} placeholder="https://example.com" className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
                 </div>
                 <button
                   onClick={() => {
+                    if (newQuickLinkName.trim() && newQuickLinkUrl.trim()) {
+                      if (!newQuickLinkUrl.startsWith('http://') && !newQuickLinkUrl.startsWith('https://')) {
+                        alert('Please enter a valid URL (starting with http:// or https://)');
+                        return;
+                      }
+                      setCurrentQuickLinksList(prev => [...prev, {id: Date.now().toString(), name: newQuickLinkName, url: newQuickLinkUrl}]);
+                      setNewQuickLinkName('');
+                      setNewQuickLinkUrl('');
+                    } else {
+                      alert('Please fill in both name and URL for the link.');
+                    }
+                  }}
+                  className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-md text-xs flex items-center justify-center"
+                >
+                  Add New Link
+                </button>
+                <hr className="border-gray-600 my-2"/>
+                <h4 className="text-xs font-medium text-gray-400 mb-1">Current Links:</h4>
+                {currentQuickLinksList.length === 0 ? <p className="text-xs text-gray-500 italic">No links added yet.</p> : (
+                  <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    {currentQuickLinksList.map(link => (
+                      <li key={link.id} className="flex items-center justify-between p-1 bg-gray-600 rounded-md">
+                        <span className="truncate text-gray-300" title={`${link.name} (${link.url})`}>{link.name}</span>
+                        <button onClick={() => setCurrentQuickLinksList(prev => prev.filter(l => l.id !== link.id))} className="text-red-500 hover:text-red-400 p-0.5 text-xs">Delete</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  onClick={() => {
                     if (editingContentWidget) {
-                      const textKey = `widgetContent_statusText_${editingContentWidget.instanceId}`;
-                      const emojiKey = `widgetContent_moodEmoji_${editingContentWidget.instanceId}`;
-                      localStorage.setItem(textKey, currentStatusText);
-                      localStorage.setItem(emojiKey, currentMoodEmoji);
-                      alert("Mood/Status saved successfully!");
+                      const linksKey = `widgetContent_quickLinks_links_${editingContentWidget.instanceId}`;
+                      localStorage.setItem(linksKey, JSON.stringify(currentQuickLinksList));
+                      alert("Links saved successfully!");
                       setIsContentModalOpen(false);
                       setEditingContentWidget(null);
                     }
                   }}
-                  className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-md font-semibold"
+                  className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold"
                 >
-                  Save Mood/Status
+                  Save All Links
                 </button>
               </div>
             )}
           </Modal>
         )}
       </div>
+    </AppLayout>
+    </AppLayout>
     </AppLayout>
   );
 };

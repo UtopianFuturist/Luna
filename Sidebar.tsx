@@ -144,22 +144,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               </li>
               <li>
                 <Link
-                  href="/settings/widget-board"
+                  href="/widget-board-settings"
                   className="flex items-center px-4 py-3 text-white hover:bg-gray-800"
                   onClick={onClose}
                 >
                   <LayoutGrid size={20} className="mr-4" />
-                  <span>Widget Settings</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/settings/profile"
-                  className="flex items-center px-4 py-3 text-white hover:bg-gray-800"
-                  onClick={onClose}
-                >
-                  <User size={20} className="mr-4" /> {/* Reusing User icon */}
-                  <span>Profile Settings</span>
+                  <span>Widget Board</span>
                 </Link>
               </li>
               <li>
