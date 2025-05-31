@@ -4,37 +4,93 @@ import React, { useState, useEffect } from 'react';
 import {
   Music, Users, Image as ImageIcon, Sun, BookOpen, UtensilsCrossed, HelpCircle,
   Github, Palette, MessageSquare, Send, CheckSquare, Trash2,
-  BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, PlusCircle, Link as LinkIcon
+  BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, PlusCircle, LinkOff, Link as LinkIcon, Pin, HelpCircle as HelpCircleIcon // Added HelpCircle for battery loading
 } from 'lucide-react';
 
 interface WidgetProps {
+  instanceId: string;
   widgetId: string;
   widgetName: string;
-  // Potentially add other common props like onRemove, onEdit, etc. later
 }
 
-const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
+const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => {
   const renderWidgetContent = () => {
+    // Hooks are called at the top level of the component for each specific widget case.
+    // ESLint disable comments are used because these hooks are conditionally rendered based on widgetId.
+    // This is a common pattern for dynamically rendering different components with their own state.
+
     switch (widgetId) {
-      case 'moodStatus':
+      case 'moodStatus': {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [statusText, setStatusText] = useState("No status set");
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [moodEmoji, setMoodEmoji] = useState("🤔");
+        const textKey = `widgetContent_statusText_${instanceId}`;
+        const emojiKey = `widgetContent_moodEmoji_${instanceId}`;
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          if (typeof window !== 'undefined') {
+            const savedText = localStorage.getItem(textKey);
+            const savedEmoji = localStorage.getItem(emojiKey);
+            if (savedText !== null) setStatusText(savedText);
+            else setStatusText("No status set"); // Default if nothing saved
+
+            if (savedEmoji !== null) setMoodEmoji(savedEmoji);
+            else setMoodEmoji("🤔"); // Default if nothing saved
+          }
+        }, [instanceId, textKey, emojiKey]); // instanceId in dep array
+
         return (
-          <div className="text-center">
-            <span className="text-4xl" role="img" aria-label="Happy face">😊</span>
-            <p className="mt-2 text-gray-300">Feeling great today!</p>
+          <div className="text-center p-1">
+            <span className="text-4xl block mb-1" role="img" aria-label="Mood emoji">{moodEmoji || '🤔'}</span>
+            <p className="text-sm text-gray-300 break-words whitespace-pre-wrap">
+              {statusText || "No status set"}
+            </p>
           </div>
         );
-      case 'quoteOfTheDay':
+      }
+      case 'quoteOfTheDay': {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [quoteText, setQuoteText] = useState("No quote set.");
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [quoteAuthor, setQuoteAuthor] = useState("");
+        const textKey = `widgetContent_quoteText_${instanceId}`;
+        const authorKey = `widgetContent_quoteAuthor_${instanceId}`;
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          if (typeof window !== 'undefined') {
+            const savedText = localStorage.getItem(textKey);
+            const savedAuthor = localStorage.getItem(authorKey);
+            if (savedText !== null) setQuoteText(savedText);
+            if (savedAuthor !== null) setQuoteAuthor(savedAuthor);
+            // No saving from here, only loading or default. Setting is via external means.
+          }
+        }, [instanceId, textKey, authorKey]); // instanceId in dep array if needed for re-fetch on prop change
+
         return (
           <div>
             <blockquote className="text-lg italic text-gray-300">
-              "The only way to do great work is to love what you do."
+              "{quoteText}"
             </blockquote>
-            <p className="text-right mt-2 text-gray-400">- Steve Jobs</p>
+            {quoteAuthor && <p className="text-right mt-2 text-gray-400">- {quoteAuthor}</p>}
           </div>
         );
-      case 'quickLinks': { // Renamed from linkHub to match availableWidgetsList ID
+      }
+      case 'pinnedPostWidget':
+        return (
+          <div className="text-center p-4 text-gray-300">
+            <Pin size={24} className="mx-auto mb-2 text-sky-400" />
+            <h4 className="font-semibold text-white">My Pinned Post</h4>
+            <p className="text-sm text-gray-400 mt-1">
+              Content of the actual pinned post would appear here. This could be text, an image, or a link.
+            </p>
+          </div>
+        );
+      case 'quickLinks': {
         interface LinkItem { id: number; name: string; url: string; }
-        const lsLinksKey = `widget_quickLinks_links_${widgetId}`;
+        const lsLinksKey = `widgetContent_quickLinks_links_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [userLinks, setUserLinks] = useState<LinkItem[]>(() => {
@@ -92,20 +148,21 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
                 <span>Add Link</span>
               </button>
             </div>
-            <ul className="space-y-1 overflow-y-auto flex-grow" style={{maxHeight: '90px'}}>
-              {userLinks.length === 0 && <p className="text-gray-400 text-xs italic">No links added yet.</p>}
+            <ul className="space-y-1 overflow-y-auto flex-grow" style={{maxHeight: '85px'}}> {/* Adjusted maxHeight slightly */}
+              {userLinks.length === 0 && <p className="text-gray-400 text-xs italic text-center mt-2">No links added yet.</p>}
               {userLinks.map(link => (
-                <li key={link.id} className="flex items-center justify-between p-1 bg-gray-700 rounded-md">
+                <li key={link.id} className="flex items-center justify-between p-1.5 bg-gray-700 rounded-md">
                   <a
                     href={link.url}
-                    className="text-blue-400 hover:text-blue-300 hover:underline truncate flex-1 text-xs mr-1"
+                    className="text-blue-400 hover:text-blue-300 hover:underline truncate flex-1 text-xs mr-2 flex items-center"
                     target="_blank"
                     rel="noopener noreferrer"
                     title={link.url}
                   >
+                    <LinkIcon size={12} className="mr-1.5 text-gray-500 flex-shrink-0"/>
                     {link.name}
                   </a>
-                  <button onClick={() => handleDeleteLink(link.id)} className="text-red-500 hover:text-red-400">
+                  <button onClick={() => handleDeleteLink(link.id)} className="text-red-500 hover:text-red-400 p-0.5">
                     <Trash2 size={14}/>
                   </button>
                 </li>
@@ -213,24 +270,24 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
       case 'stickyNote': {
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [note, setNote] = useState('');
-        const storageKey = `widget_stickyNote_content`; // Simpler key for single instance assumption
+        const storageKey = `widgetContent_stickyNote_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
           if (typeof window !== 'undefined') {
             const savedNote = localStorage.getItem(storageKey);
-            if (savedNote) {
+            if (savedNote !== null) { // Check for null explicitly
               setNote(savedNote);
             }
           }
-        }, [storageKey]);
+        }, [instanceId, storageKey]); // instanceId added to dep array
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
           if (typeof window !== 'undefined') {
             localStorage.setItem(storageKey, note);
           }
-        }, [note, storageKey]);
+        }, [note, storageKey]); // storageKey will change if instanceId changes
 
         return (
           <textarea
@@ -243,8 +300,8 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
         );
       }
       case 'countdownTimer': {
-        const lsTitleKey = `widget_countdownTitle_${widgetId}`;
-        const lsTargetDateKey = `widget_countdownTargetDate_${widgetId}`;
+        const lsTitleKey = `widgetContent_countdownTitle_${instanceId}`;
+        const lsTargetDateKey = `widgetContent_countdownTargetDate_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [title, setTitle] = useState(() => {
@@ -265,12 +322,12 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
-          localStorage.setItem(lsTitleKey, title);
+          if (typeof window !== 'undefined') localStorage.setItem(lsTitleKey, title);
         }, [title, lsTitleKey]);
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
-          localStorage.setItem(lsTargetDateKey, targetDateStr);
+          if (typeof window !== 'undefined') localStorage.setItem(lsTargetDateKey, targetDateStr);
         }, [targetDateStr, lsTargetDateKey]);
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -321,70 +378,94 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
         const [batteryInfo, setBatteryInfo] = useState<{ level: number; charging: boolean; error: string | null }>({
           level: 0,
           charging: false,
-          error: 'Loading battery status...',
+          error: 'Initializing...',
         });
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
-          let batteryManager: any = null; // To store battery manager for cleanup
+          let batteryManager: any = null;
+          let isMounted = true;
 
-          const updateBatteryStatus = (bm: any) => {
-            setBatteryInfo({
-              level: bm.level * 100,
-              charging: bm.charging,
-              error: null,
-            });
+          const _updateBatteryStatus = (bm: any) => { // Renamed to avoid conflict
+            if (isMounted) {
+              setBatteryInfo({
+                level: bm.level * 100,
+                charging: bm.charging,
+                error: null,
+              });
+            }
+          };
+
+          const _handleNotSupported = () => { // Renamed to avoid conflict
+            if (isMounted) {
+              setBatteryInfo({ level: 0, charging: false, error: 'Battery API not supported.' });
+            }
           };
 
           if (typeof navigator.getBattery === 'function') {
             navigator.getBattery()
               .then(bm => {
-                batteryManager = bm; // Assign to outer scope variable
-                updateBatteryStatus(bm);
-                bm.addEventListener('chargingchange', () => updateBatteryStatus(bm));
-                bm.addEventListener('levelchange', () => updateBatteryStatus(bm));
+                if (!isMounted) return;
+                batteryManager = bm;
+                _updateBatteryStatus(bm); // Use renamed function
+
+                // Store bound functions to be able to remove them
+                const chargingChangeHandler = () => _updateBatteryStatus(bm);
+                const levelChangeHandler = () => _updateBatteryStatus(bm);
+
+                bm.addEventListener('chargingchange', chargingChangeHandler);
+                bm.addEventListener('levelchange', levelChangeHandler);
+
+                batteryManager._cleanupListeners = () => {
+                  bm.removeEventListener('chargingchange', chargingChangeHandler);
+                  bm.removeEventListener('levelchange', levelChangeHandler);
+                };
               })
               .catch(err => {
-                console.error("Error getting battery status:", err);
-                setBatteryInfo({ level: 0, charging: false, error: 'Battery status unavailable.' });
+                if (isMounted) {
+                  console.error("Error getting battery status:", err);
+                  setBatteryInfo({ level: 0, charging: false, error: 'Battery status unavailable.' });
+                }
               });
           } else {
-            setBatteryInfo({ level: 0, charging: false, error: 'Battery API not supported.' });
+            _handleNotSupported(); // Use renamed function
           }
 
-          return () => { // Cleanup function
-            if (batteryManager) {
-              batteryManager.removeEventListener('chargingchange', () => updateBatteryStatus(batteryManager));
-              batteryManager.removeEventListener('levelchange', () => updateBatteryStatus(batteryManager));
+          return () => {
+            isMounted = false;
+            if (batteryManager && batteryManager._cleanupListeners) {
+              batteryManager._cleanupListeners();
             }
           };
-        }, []);
+        }, []); // Empty dependency array, runs once
 
         const renderBatteryIcon = () => {
-          if (batteryInfo.error) return <BatteryWarning size={32} className="text-red-500" />;
-          if (batteryInfo.charging) return <BatteryCharging size={32} className="text-green-500" />;
-          if (batteryInfo.level > 80) return <BatteryFull size={32} className="text-green-500" />;
-          if (batteryInfo.level > 40) return <BatteryMedium size={32} className="text-yellow-500" />;
-          return <BatteryLow size={32} className="text-red-500" />;
+          if (batteryInfo.error && batteryInfo.error !== 'Initializing...') return <BatteryWarning size={32} className="text-red-400" />;
+          if (batteryInfo.charging) return <BatteryCharging size={32} className="text-green-400" />;
+          if (batteryInfo.level > 80) return <BatteryFull size={32} className="text-green-400" />;
+          if (batteryInfo.level > 40) return <BatteryMedium size={32} className="text-yellow-400" />;
+          if (batteryInfo.level > 0) return <BatteryLow size={32} className="text-orange-500" />;
+          if (batteryInfo.error === 'Initializing...') return <HelpCircleIcon size={32} className="text-gray-500"/>;
+          return <BatteryWarning size={32} className="text-red-400" />;
         };
 
         return (
           <div className="flex flex-col items-center justify-center h-full text-center">
             {renderBatteryIcon()}
-            {batteryInfo.error ? (
+            {batteryInfo.error && batteryInfo.error !== 'Initializing...' ? (
               <p className="mt-2 text-sm text-red-400">{batteryInfo.error}</p>
-            ) : (
+            ) : !batteryInfo.error ? (
               <>
                 <p className="mt-1 text-2xl font-bold text-white">{Math.round(batteryInfo.level)}%</p>
-                <p className="text-xs text-gray-400">{batteryInfo.charging ? 'Charging' : 'Discharging'}</p>
+                <p className="text-xs text-gray-400">{batteryInfo.charging ? 'Charging' : 'Not Charging'}</p>
               </>
-            )}
+            ) : null }
           </div>
         );
       }
       case 'guestbook': {
         interface GuestbookEntry { id: number; name: string; message: string; date: string; }
-        const lsGuestbookKey = `widget_guestbook_entries_${widgetId}`;
+        const lsGuestbookKey = `widgetContent_guestbook_entries_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [entries, setEntries] = useState<GuestbookEntry[]>(() => {
@@ -453,9 +534,10 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
       }
       case 'miniPoll': {
         interface PollOption { id: string; text: string; votes: number; }
-        const pollQuestion = "Favorite Season?";
-        const lsPollOptionsKey = `widget_miniPoll_options_${widgetId}_${pollQuestion.replace(/\s/g, '')}`;
-        const lsPollVotedKey = `widget_miniPoll_voted_${widgetId}_${pollQuestion.replace(/\s/g, '')}`;
+        const pollQuestion = "Favorite Season?"; // This could be made configurable too
+        const pollQuestionIdentifier = pollQuestion.replace(/\s/g, '');
+        const lsPollOptionsKey = `widgetContent_miniPoll_options_${instanceId}_${pollQuestionIdentifier}`;
+        const lsPollVotedKey = `widgetContent_miniPoll_voted_${instanceId}_${pollQuestionIdentifier}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [options, setOptions] = useState<PollOption[]>(() => {
@@ -556,7 +638,7 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
       }
       case 'simpleTodoList': {
         interface TodoItem { id: number; text: string; completed: boolean; }
-        const lsTodoKey = `widget_todoItems_${widgetId}`;
+        const lsTodoKey = `widgetContent_todoItems_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [todos, setTodos] = useState<TodoItem[]>(() => {
@@ -672,6 +754,7 @@ const Widget: React.FC<WidgetProps> = ({ widgetId, widgetName }) => {
           </div>
         );
       }
+      // Keep existing cases for other widgets...
       // Add more cases as actual widget implementations are developed
       default:
         return <p className="text-red-400">Unknown Widget Type: {widgetId}</p>;

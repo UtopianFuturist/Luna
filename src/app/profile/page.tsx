@@ -35,76 +35,42 @@ const availableWidgetsList = [
   { id: 'githubProjectShowcase', name: 'GitHub Projects' },
   { id: 'artGallerySnippet', name: 'Art Gallery Snippet' },
   { id: 'deviceBattery', name: 'Device Battery' },
+  { id: 'pinnedPostWidget', name: 'Pinned Post' },
 ];
 
-const MAX_WIDGET_SLOTS_TOTAL = 8; // Total slots in the layout
-const WIDGETS_PER_PAGE = 4; // Slots per page view (2x2 grid)
+interface ConfiguredWidget {
+  instanceId: string;
+  widgetId: string;
+  page: 1 | 2;
+  row: 0 | 1;
+  col: 0 | 1;
+  size: '1x1' | '1x2' | '2x1' | '2x2';
+}
 
 const ProfilePage: React.FC = () => {
-  const [currentWidgetLayout, setCurrentWidgetLayout] = useState<(string | null)[]>(Array(MAX_WIDGET_SLOTS_TOTAL).fill(null));
+  const [configuredWidgetsFromStorage, setConfiguredWidgetsFromStorage] = useState<ConfiguredWidget[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
-
-  // Placeholder for actual pinned post data and logic - this is specific to the profile page
-  const pinnedPostPlaceholder = {
-    id: 'pinnedPost', // Special ID for the pinned post slot
-    name: 'Pinned Post',
-  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let loadedLayout = Array(MAX_WIDGET_SLOTS_TOTAL).fill(null);
-      const storedLayout = localStorage.getItem('userWidgetLayout');
-
-      if (storedLayout) {
+      const savedLayout = localStorage.getItem('userConfiguredWidgetsLayout_v2');
+      if (savedLayout) {
         try {
-          const parsedLayout = JSON.parse(storedLayout);
-          if (Array.isArray(parsedLayout) && parsedLayout.length === MAX_WIDGET_SLOTS_TOTAL) {
-            loadedLayout = parsedLayout;
+          const parsedLayout = JSON.parse(savedLayout);
+          if (Array.isArray(parsedLayout)) { // Add more validation as needed
+            setConfiguredWidgetsFromStorage(parsedLayout);
           } else {
-            console.warn("Stored widget layout is invalid. Initializing with defaults.");
-            // Fallback to default initialization if stored layout is malformed
-            initializeDefaultLayout(loadedLayout);
+            setConfiguredWidgetsFromStorage([]); // Initialize if invalid
           }
         } catch (error) {
-          console.error("Error parsing widget layout from localStorage:", error);
-          initializeDefaultLayout(loadedLayout); // Initialize on error
+          console.error("Error parsing configured widget layout from localStorage:", error);
+          setConfiguredWidgetsFromStorage([]); // Initialize on error
         }
       } else {
-        // No layout found, try to build one from selected widgets (if any) or set to default
-        initializeDefaultLayout(loadedLayout);
+        setConfiguredWidgetsFromStorage([]); // Initialize if not found
       }
-      setCurrentWidgetLayout(loadedLayout);
     }
-  }, []); // Empty dependency array means this runs once on mount
-
-  // Helper to initialize layout if none is found or if it's invalid
-  const initializeDefaultLayout = (layoutArray: (string | null)[]) => {
-    // This function could try to populate from 'userSelectedWidgets' if that's desired
-    // For now, it just ensures the pinned post slot is conceptually there.
-    // The actual pinned post is rendered separately, not via Widget component for slot 0.
-    // So, layout[0] might represent the first *configurable* widget slot if pinned post is fixed.
-    // For this iteration, assuming layout[0] is for pinned post, then layout[1-7] are for other widgets.
-    // However, the prompt implies layout[0] is for pinned post content on page 1,
-    // and then layout[1-3] are other widgets on page 1.
-    // Page 2 uses layout[4-7].
-    // The `userWidgetLayout` from settings page does not include a pinned post slot.
-    // So, we adapt. The `currentWidgetLayout` here will be shifted for display.
-    // Let's assume the loaded layout from 'userWidgetLayout' is for the 8 *configurable* slots.
-    // Pinned post will be handled as a special case on page 1.
-    // This means the `currentWidgetLayout` here should match the structure of `userWidgetLayout`.
-    const storedSelectedIds = localStorage.getItem('userSelectedWidgets');
-    if (storedSelectedIds) {
-        try {
-            const parsedIds: string[] = JSON.parse(storedSelectedIds);
-            if (Array.isArray(parsedIds)) {
-                for (let i = 0; i < parsedIds.length && i < MAX_WIDGET_SLOTS_TOTAL; i++) {
-                    layoutArray[i] = parsedIds[i];
-                }
-            }
-        } catch (e) { console.error("Could not initialize layout from selected widgets", e); }
-    }
-    // `layoutArray` is modified in place or a new one is returned and set
-  };
+  }, []);
 
   const getWidgetDataById = (id: string | null): { id: string; name: string } | null => {
     if (!id) return null;
@@ -112,30 +78,8 @@ const ProfilePage: React.FC = () => {
     return widget || null;
   };
 
-  // Returns data for the 3 or 4 configurable slots on the current page
-  const getWidgetDataForPageSlots = (): ({ id: string; name: string } | null)[] => {
-    if (currentPage === 1) {
-      // Page 1 has 3 configurable slots after the Pinned Post
-      return [
-        getWidgetDataById(currentWidgetLayout[0]), // Corresponds to grid cell 2
-        getWidgetDataById(currentWidgetLayout[1]), // Corresponds to grid cell 3
-        getWidgetDataById(currentWidgetLayout[2]), // Corresponds to grid cell 4
-      ];
-    } else { // currentPage === 2
-      // Page 2 has 4 configurable slots
-      return [
-        getWidgetDataById(currentWidgetLayout[3]), // Corresponds to grid cell 1
-        getWidgetDataById(currentWidgetLayout[4]), // Corresponds to grid cell 2
-        getWidgetDataById(currentWidgetLayout[5]), // Corresponds to grid cell 3
-        getWidgetDataById(currentWidgetLayout[6]), // Corresponds to grid cell 4
-      ];
-    }
-  };
-
-  const widgetDataForSlots = getWidgetDataForPageSlots();
-
   const handleNextPage = () => {
-    if (currentPage === 1) {
+    if (currentPage === 1 && configuredWidgetsFromStorage.some(w => w.page === 2)) {
       setCurrentPage(2);
     }
   };
@@ -146,11 +90,10 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Determine if Next Page button should be shown
-  const showNextPageButton = currentPage === 1 && currentWidgetLayout.slice(3, 7).some(id => id !== null);
-  // Determine if Previous Page button should be shown
-  const showPreviousPageButton = currentPage === 2;
+  const widgetsForCurrentPage = configuredWidgetsFromStorage.filter(w => w.page === currentPage);
 
+  const showNextPageButton = currentPage === 1 && configuredWidgetsFromStorage.some(w => w.page === 2);
+  const showPreviousPageButton = currentPage === 2;
 
   return (
     <AppLayout currentPage="Profile" showSidebarButton={true}>
@@ -158,37 +101,37 @@ const ProfilePage: React.FC = () => {
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-3">My Widget Board - Page {currentPage}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[320px]"> {/* min-h to prevent layout jump */}
-            {Array.from({ length: WIDGETS_PER_PAGE }).map((_, cellIndex) => {
-              if (currentPage === 1 && cellIndex === 0) {
-                // First cell on Page 1 is always Pinned Post
+          <div className="grid grid-cols-2 grid-rows-2 gap-4 min-h-[calc(2*160px+1rem)]"> {/* Ensure consistent height */}
+            {widgetsForCurrentPage.length === 0 && (
+              <div className="col-span-2 row-span-2 flex items-center justify-center text-gray-500">
+                <p>No widgets configured for this page. Go to settings to add some!</p>
+              </div>
+            )}
+            {widgetsForCurrentPage.map((widgetConfig) => {
+              const widgetDetails = getWidgetDataById(widgetConfig.widgetId);
+              if (!widgetDetails) {
                 return (
-                  <div key="pinned-post" className="bg-gray-800 p-4 rounded-lg shadow min-h-[150px] flex flex-col justify-center items-center text-center">
-                    <h3 className="text-lg font-semibold mb-2">{pinnedPostPlaceholder.name}</h3>
-                    <p><em>Display pinned post here.</em></p>
+                  <div key={widgetConfig.instanceId} className="bg-red-500 p-2 rounded-md flex items-center justify-center text-xs col-start-1 row-start-1 col-span-1 row-span-1"> {/* Default small size for error */}
+                    Error: Widget ID '{widgetConfig.widgetId}' not found.
                   </div>
                 );
               }
 
-              // Determine the actual widget data for this cell
-              let widgetToRenderData: { id: string; name: string } | null = null;
-              if (currentPage === 1) {
-                // For Page 1, cellIndex 1, 2, 3 map to widgetDataForSlots[0], [1], [2]
-                widgetToRenderData = widgetDataForSlots[cellIndex -1];
-              } else { // currentPage === 2
-                // For Page 2, cellIndex 0, 1, 2, 3 map to widgetDataForSlots[0], [1], [2], [3]
-                widgetToRenderData = widgetDataForSlots[cellIndex];
-              }
+              const colSpan = widgetConfig.size.endsWith('2') ? '2' : '1';
+              const rowSpan = widgetConfig.size.startsWith('2') ? '2' : '1';
 
-              if (widgetToRenderData) {
-                return <Widget key={widgetToRenderData.id + '-' + cellIndex} widgetId={widgetToRenderData.id} widgetName={widgetToRenderData.name} />;
-              } else {
-                return (
-                  <div key={`empty-${cellIndex}`} className="bg-gray-700 p-4 rounded-lg shadow min-h-[150px] flex justify-center items-center">
-                    <p className="text-gray-400">Empty Widget Slot</p>
-                  </div>
-                );
-              }
+              const gridPlacementClass = `
+                col-start-${widgetConfig.col + 1}
+                row-start-${widgetConfig.row + 1}
+                col-span-${colSpan}
+                row-span-${rowSpan}
+              `;
+
+              return (
+                <div key={widgetConfig.instanceId} className={`${gridPlacementClass} bg-gray-800 rounded-lg shadow-md flex flex-col overflow-hidden`}> {/* Added overflow-hidden */}
+                  <Widget instanceId={widgetConfig.instanceId} widgetId={widgetDetails.id} widgetName={widgetDetails.name} />
+                </div>
+              );
             })}
           </div>
           {/* Pagination Controls */}

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppLayout } from '@/components/AppLayout'; // Assuming AppLayout is in src/components
+import { AppLayout } from '@/components/AppLayout';
+import Modal from '@/components/Modal'; // Import the Modal component
 
 const availableWidgets = [
   { id: 'currentlyListening', name: 'Currently Listening To' },
@@ -33,189 +34,435 @@ const availableWidgets = [
   { id: 'githubProjectShowcase', name: 'GitHub Projects' },
   { id: 'artGallerySnippet', name: 'Art Gallery Snippet' },
   { id: 'deviceBattery', name: 'Device Battery' },
-  // Total 29 widgets
+  { id: 'pinnedPostWidget', name: 'Pinned Post' },
+  // Total 30 widgets
 ];
 
-const MAX_WIDGET_SLOTS = 8;
+// const MAX_WIDGET_SLOTS = 8; // No longer directly used, layout drives this.
+
+interface ConfiguredWidget {
+  instanceId: string; // Unique ID for this instance of a widget
+  widgetId: string;   // ID of the widget type from availableWidgets
+  page: 1 | 2;
+  row: 0 | 1;
+  col: 0 | 1;
+  size: '1x1' | '1x2' | '2x1' | '2x2';
+}
 
 const WidgetBoardSettingsPage: React.FC = () => {
-  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>([]);
-  const [widgetLayout, setWidgetLayout] = useState<(string | null)[]>(Array(MAX_WIDGET_SLOTS).fill(null));
+  const [configuredWidgets, setConfiguredWidgets] = useState<ConfiguredWidget[]>([]);
+  const [editingWidget, setEditingWidget] = useState<ConfiguredWidget | null>(null); // For layout editing
 
-  // Load data from localStorage on mount
+  // State for content editing modal
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+  const [editingContentWidget, setEditingContentWidget] = useState<ConfiguredWidget | null>(null);
+
+  // State for the quote form within the modal
+  const [currentQuoteText, setCurrentQuoteText] = useState('');
+  const [currentQuoteAuthor, setCurrentQuoteAuthor] = useState('');
+
+  // State for the mood/status form within the modal
+  const [currentStatusText, setCurrentStatusText] = useState('');
+  const [currentMoodEmoji, setCurrentMoodEmoji] = useState('');
+
+
+  // Load and Save configuredWidgets
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Load selected widget IDs
-      const storedSelectedIds = localStorage.getItem('userSelectedWidgets');
-      let loadedSelectedIds: string[] = [];
-      if (storedSelectedIds) {
+      const saved = localStorage.getItem('userConfiguredWidgetsLayout_v2');
+      if (saved) {
         try {
-          const parsedIds = JSON.parse(storedSelectedIds);
-          if (Array.isArray(parsedIds)) {
-            loadedSelectedIds = parsedIds;
-            setSelectedWidgetIds(loadedSelectedIds);
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) { // Add more validation if needed
+            setConfiguredWidgets(parsed);
           }
-        } catch (error) {
-          console.error("Error parsing selected widgets from localStorage:", error);
+        } catch (e) {
+          console.error("Error parsing configured widgets from localStorage", e);
         }
       }
-
-      // Load widget layout
-      const storedLayout = localStorage.getItem('userWidgetLayout');
-      if (storedLayout) {
-        try {
-          const parsedLayout = JSON.parse(storedLayout);
-          // Basic validation: ensure it's an array and has the correct number of slots
-          if (Array.isArray(parsedLayout) && parsedLayout.length === MAX_WIDGET_SLOTS) {
-            setWidgetLayout(parsedLayout);
-          } else {
-            // If stored layout is invalid, initialize from loadedSelectedIds
-            initializeLayoutFromSelected(loadedSelectedIds);
-          }
-        } catch (error) {
-          console.error("Error parsing widget layout from localStorage:", error);
-          initializeLayoutFromSelected(loadedSelectedIds); // Initialize on error
-        }
-      } else {
-        // No layout found, initialize from loadedSelectedIds
-        initializeLayoutFromSelected(loadedSelectedIds);
-      }
     }
-  }, []); // Empty dependency array: runs once on mount
-
-  const initializeLayoutFromSelected = useCallback((currentSelectedIds: string[]) => {
-    const initialLayout = Array(MAX_WIDGET_SLOTS).fill(null);
-    let layoutIndex = 0;
-    for (const id of currentSelectedIds) {
-      if (layoutIndex < MAX_WIDGET_SLOTS) {
-        initialLayout[layoutIndex++] = id;
-      } else {
-        break;
-      }
-    }
-    setWidgetLayout(initialLayout);
   }, []);
 
-
-  // Save data to localStorage whenever selectedWidgetIds or widgetLayout change
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('userSelectedWidgets', JSON.stringify(selectedWidgetIds));
-        localStorage.setItem('userWidgetLayout', JSON.stringify(widgetLayout));
-      } catch (error) {
-        console.error("Error saving data to localStorage:", error);
-      }
+      localStorage.setItem('userConfiguredWidgetsLayout_v2', JSON.stringify(configuredWidgets));
     }
-  }, [selectedWidgetIds, widgetLayout]);
+  }, [configuredWidgets]);
 
-  const handleWidgetSelection = (widgetId: string) => {
-    // This function now also needs to update the layout if a widget is deselected
-    setSelectedWidgetIds(prevSelected => {
-      let newSelectedIds;
-      if (prevSelected.includes(widgetId)) {
-        newSelectedIds = prevSelected.filter(id => id !== widgetId);
-        // If widget is deselected, remove it from layout
-        setWidgetLayout(currentLayout => currentLayout.map(slotId => slotId === widgetId ? null : slotId));
-        return newSelectedIds;
-      } else {
-        if (prevSelected.length < MAX_WIDGET_SLOTS) { // Max 8 selected to match layout slots
-          newSelectedIds = [...prevSelected, widgetId];
-          // Optionally, auto-add to first available slot in layout if behavior is desired
-          // For now, user explicitly assigns via layout UI.
-          return newSelectedIds;
-        } else {
-          alert(`You can select up to ${MAX_WIDGET_SLOTS} widgets to place on your board.`);
-          return prevSelected;
-        }
-      }
-    });
-  };
-
-  const handleLayoutChange = (slotIndex: number, newWidgetId: string | null) => {
-    setWidgetLayout(currentLayout => {
-      const newLayout = [...currentLayout];
-      // If the widget is already in another slot, clear that other slot
-      if (newWidgetId !== null) {
-        for (let i = 0; i < newLayout.length; i++) {
-          if (newLayout[i] === newWidgetId && i !== slotIndex) {
-            newLayout[i] = null; // Clear old position
-          }
-        }
-      }
-      newLayout[slotIndex] = newWidgetId;
-      return newLayout;
-    });
-  };
-
-  const getWidgetNameById = (id: string | null) => {
-    if (!id) return "Empty";
+  const getWidgetNameById = (id: string | null): string => {
+    if (!id) return "N/A";
     return availableWidgets.find(w => w.id === id)?.name || "Unknown Widget";
   };
 
-  // Widgets available for assignment (those in selectedWidgetIds)
-  const assignableWidgets = availableWidgets.filter(widget => selectedWidgetIds.includes(widget.id));
+  const isValidPlacement = (widgets: ConfiguredWidget[], newWidget: ConfiguredWidget, existingInstanceIdToExclude?: string): boolean => {
+    if (newWidget.row < 0 || newWidget.row > 1 || newWidget.col < 0 || newWidget.col > 1) return false;
+
+    const [sizeRows, sizeCols] = newWidget.size.split('x').map(Number);
+    if (newWidget.row + sizeRows > 2 || newWidget.col + sizeCols > 2) return false; // Exceeds 2x2 page grid
+
+    // Check for overlaps
+    for (const w of widgets) {
+      if (w.instanceId === existingInstanceIdToExclude || w.page !== newWidget.page) continue;
+
+      const [wRows, wCols] = w.size.split('x').map(Number);
+      // Check for intersection of rectangles
+      if (
+        newWidget.col < w.col + wCols &&
+        newWidget.col + sizeCols > w.col &&
+        newWidget.row < w.row + wRows &&
+        newWidget.row + sizeRows > w.row
+      ) {
+        return false; // Overlap detected
+      }
+    }
+    return true;
+  };
+
+  const findFirstAvailableSlot = (page: 1 | 2, sizeToFit: ConfiguredWidget['size'] = '1x1'): { page: 1 | 2, row: 0 | 1, col: 0 | 1 } | null => {
+    const [sRows, sCols] = sizeToFit.split('x').map(Number);
+    for (let r = 0; r <= 2 - sRows; r++) {
+      for (let c = 0; c <= 2 - sCols; c++) {
+        const testWidget: ConfiguredWidget = { instanceId: 'test', widgetId: 'test', page, row: r as 0|1, col: c as 0|1, size: sizeToFit };
+        if (isValidPlacement(configuredWidgets, testWidget)) {
+          return { page, row: r as 0|1, col: c as 0|1 };
+        }
+      }
+    }
+    return null; // No slot found on this page
+  };
+
+
+  const handleAddWidgetToBoard = (widgetId: string) => {
+    if (configuredWidgets.length >= 8 && !configuredWidgets.find(w => w.widgetId === 'pinnedPostWidget' && widgetId === 'pinnedPostWidget')) {
+        // A bit complex: allow adding pinnedPostWidget even if 8 widgets, if it's not already there.
+        // But generally limit to 8 configurable widgets.
+        // For now, let's simplify: if adding pinnedPostWidget, check if it exists. If other, check count.
+        if (widgetId === 'pinnedPostWidget' && configuredWidgets.find(w => w.widgetId === 'pinnedPostWidget')) {
+            alert("Pinned post widget can only be added once.");
+            return;
+        } else if (widgetId !== 'pinnedPostWidget' && configuredWidgets.filter(w => w.widgetId !== 'pinnedPostWidget').length >= 7 && !configuredWidgets.find(w => w.widgetId === 'pinnedPostWidget')) {
+             alert("Max 7 configurable widgets if Pinned Post is not used, or if Pinned Post is used it takes up space making it effectively 1 of the 8 slots.");
+             return;
+        } else if (widgetId !== 'pinnedPostWidget' && configuredWidgets.length >=8) {
+            alert("Maximum 8 widgets (including pinned post) can be configured.");
+            return;
+        }
+    }
+
+
+    let slot = findFirstAvailableSlot(1);
+    let targetPage: 1 | 2 = 1;
+    if (!slot) {
+      slot = findFirstAvailableSlot(2);
+      if (slot) targetPage = 2;
+    }
+
+    if (slot) {
+      const newWidget: ConfiguredWidget = {
+        instanceId: Date.now().toString(),
+        widgetId,
+        page: targetPage,
+        row: slot.row,
+        col: slot.col,
+        size: '1x1', // Default size
+      };
+      if (isValidPlacement(configuredWidgets, newWidget)) {
+        setConfiguredWidgets([...configuredWidgets, newWidget]);
+      } else {
+        alert("Could not find a valid empty slot for this widget. Try adjusting other widgets.");
+      }
+    } else {
+      alert("No available slots on either page for a 1x1 widget.");
+    }
+  };
+
+  const handleUpdateWidgetConfig = (instanceId: string, newConfig: Partial<ConfiguredWidget>) => {
+    setConfiguredWidgets(prev => prev.map(w => {
+      if (w.instanceId === instanceId) {
+        const updatedWidget = { ...w, ...newConfig };
+        // Validate before committing update
+        if (isValidPlacement(prev.filter(conf => conf.instanceId !== instanceId), updatedWidget, instanceId)) {
+          return updatedWidget;
+        } else {
+          alert(`Invalid placement for ${getWidgetNameById(updatedWidget.widgetId)}. Overlaps or out of bounds.`);
+          return w; // Revert to old if invalid
+        }
+      }
+      return w;
+    }));
+    if (editingWidget?.instanceId === instanceId) setEditingWidget(null); // Close edit form on update
+  };
+
+  const handleRemoveWidget = (instanceId: string) => {
+    setConfiguredWidgets(prev => prev.filter(w => w.instanceId !== instanceId));
+    if (editingWidget?.instanceId === instanceId) setEditingWidget(null);
+  };
+
+
+  // UI for editing a specific widget instance
+  const renderEditForm = (widget: ConfiguredWidget) => {
+    if (!editingWidget || editingWidget.instanceId !== widget.instanceId) return null;
+
+    const currentWidgetDetails = { ...editingWidget }; // Work on a copy
+
+    const updateProperty = (prop: keyof ConfiguredWidget, value: any) => {
+        setEditingWidget(prev => prev ? ({...prev, [prop]: value}) : null);
+    };
+
+    return (
+        <div className="mt-2 p-3 bg-gray-600 rounded-md space-y-2 text-xs">
+            <div>
+                <label className="block">Page:</label>
+                <select value={currentWidgetDetails.page} onChange={e => updateProperty('page', parseInt(e.target.value) as 1|2)} className="bg-gray-500 p-1 rounded w-full">
+                    <option value="1">Page 1</option>
+                    <option value="2">Page 2</option>
+                </select>
+            </div>
+            <div>
+                <label className="block">Row (0-1):</label>
+                <select value={currentWidgetDetails.row} onChange={e => updateProperty('row', parseInt(e.target.value) as 0|1)} className="bg-gray-500 p-1 rounded w-full">
+                    <option value="0">0 (Top)</option>
+                    <option value="1">1 (Bottom)</option>
+                </select>
+            </div>
+            <div>
+                <label className="block">Col (0-1):</label>
+                <select value={currentWidgetDetails.col} onChange={e => updateProperty('col', parseInt(e.target.value) as 0|1)} className="bg-gray-500 p-1 rounded w-full">
+                    <option value="0">0 (Left)</option>
+                    <option value="1">1 (Right)</option>
+                </select>
+            </div>
+            <div>
+                <label className="block">Size:</label>
+                <select value={currentWidgetDetails.size} onChange={e => updateProperty('size', e.target.value as ConfiguredWidget['size'])} className="bg-gray-500 p-1 rounded w-full">
+                    <option value="1x1">1x1</option>
+                    <option value="1x2">1x2 (Wide)</option>
+                    <option value="2x1">2x1 (Tall)</option>
+                    <option value="2x2">2x2 (Large)</option>
+                </select>
+            </div>
+            <div className="flex space-x-2">
+                <button onClick={() => handleUpdateWidgetConfig(editingWidget.instanceId, currentWidgetDetails)} className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded">Save Changes</button>
+                <button onClick={() => setEditingWidget(null)} className="bg-gray-400 hover:bg-gray-500 px-2 py-1 rounded">Cancel</button>
+            </div>
+        </div>
+    );
+  };
+
 
   return (
     <AppLayout currentPage="Widget Settings" showSidebarButton={true}>
-      <div className="p-4 text-white">
-        <h1 className="text-2xl font-bold mb-4">Customize Your Widget Board</h1>
+      <div className="p-4 text-white space-y-6">
+        <h1 className="text-2xl font-bold">Customize Your Widget Board</h1>
 
-        <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-          <h2 className="text-xl font-semibold mb-3">1. Select Your Widgets ({selectedWidgetIds.length} / {MAX_WIDGET_SLOTS})</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Section 1: Add New Widgets */}
+        <div className="p-4 bg-gray-800 rounded-lg">
+          <h2 className="text-xl font-semibold mb-3">1. Add Widgets to Your Board</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {availableWidgets.map(widget => (
-              <label key={widget.id} className="flex items-center space-x-2 p-3 bg-gray-700 rounded-md hover:bg-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="form-checkbox h-5 w-5 text-blue-500 bg-gray-800 border-gray-600 rounded focus:ring-blue-500"
-                  checked={selectedWidgetIds.includes(widget.id)}
-                  onChange={() => handleWidgetSelection(widget.id)}
-                />
-                <span>{widget.name}</span>
-              </label>
+              <button
+                key={widget.id}
+                onClick={() => handleAddWidgetToBoard(widget.id)}
+                className="p-3 bg-blue-600 hover:bg-blue-500 rounded-md text-sm text-left"
+                title={`Add ${widget.name} to board`}
+              >
+                {widget.name}
+              </button>
             ))}
           </div>
         </div>
 
-        <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-          <h2 className="text-xl font-semibold mb-3">2. Arrange Your Widgets</h2>
-          {selectedWidgetIds.length === 0 ? (
-            <p className="text-gray-400">Select some widgets above to arrange them here.</p>
+        {/* Section 2: Configure Added Widgets */}
+        <div className="p-4 bg-gray-800 rounded-lg">
+          <h2 className="text-xl font-semibold mb-3">2. Configured Widgets ({configuredWidgets.length})</h2>
+          {configuredWidgets.length === 0 ? (
+            <p className="text-gray-400">No widgets configured yet. Add some from the list above.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Display 8 slots in two pages of 4x1 */}
-              {[0, 1].map(page => (
-                <div key={`page-${page}`} className="p-2">
-                  <h3 className="text-lg font-medium mb-2">Page {page + 1}</h3>
-                  {widgetLayout.slice(page * 4, (page + 1) * 4).map((slotWidgetId, indexInPage) => {
-                    const slotIndex = page * 4 + indexInPage;
-                    return (
-                      <div key={slotIndex} className="flex items-center justify-between p-3 mb-2 bg-gray-700 rounded-md">
-                        <span className="text-sm">
-                          Slot {indexInPage + 1}: <span className="font-semibold">{getWidgetNameById(slotWidgetId)}</span>
-                        </span>
-                        <select
-                          value={slotWidgetId || ""}
-                          onChange={(e) => handleLayoutChange(slotIndex, e.target.value === "" ? null : e.target.value)}
-                          className="bg-gray-600 text-white text-sm p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            <div className="space-y-3">
+              {configuredWidgets.map(cw => (
+                <div key={cw.instanceId} className="p-3 bg-gray-700 rounded-md text-sm">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-bold">{getWidgetNameById(cw.widgetId)}</span>
+                      <span className="text-xs text-gray-400 ml-2">(Page {cw.page}, R{cw.row}C{cw.col}, Size {cw.size})</span>
+                    </div>
+                    <div className="space-x-2">
+                       <button onClick={() => setEditingWidget(cw)} className="text-xs bg-yellow-500 hover:bg-yellow-600 px-2 py-1 rounded">Edit Layout</button>
+                       {cw.widgetId === 'quoteOfTheDay' && (
+                         <button
+                           onClick={() => {
+                             setEditingContentWidget(cw);
+                             const textKey = `widgetContent_quoteText_${cw.instanceId}`;
+                             const authorKey = `widgetContent_quoteAuthor_${cw.instanceId}`;
+                             setCurrentQuoteText(localStorage.getItem(textKey) || '');
+                             setCurrentQuoteAuthor(localStorage.getItem(authorKey) || '');
+                             setIsContentModalOpen(true);
+                           }}
+                           className="text-xs bg-purple-500 hover:bg-purple-600 px-2 py-1 rounded ml-1"
+                         >
+                           Set Quote
+                         </button>
+                       )}
+                       {cw.widgetId === 'moodStatus' && (
+                        <button
+                          onClick={() => {
+                            setEditingContentWidget(cw);
+                            const textKey = `widgetContent_statusText_${cw.instanceId}`;
+                            const emojiKey = `widgetContent_moodEmoji_${cw.instanceId}`;
+                            setCurrentStatusText(localStorage.getItem(textKey) || '');
+                            setCurrentMoodEmoji(localStorage.getItem(emojiKey) || '🤔'); // Default emoji
+                            setIsContentModalOpen(true);
+                          }}
+                          className="text-xs bg-teal-500 hover:bg-teal-600 px-2 py-1 rounded ml-1"
                         >
-                          <option value="">Empty</option>
-                          {assignableWidgets.map(widget => (
-                            <option key={widget.id} value={widget.id}>
-                              {widget.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  })}
+                          Set Mood
+                        </button>
+                       )}
+                       <button onClick={() => handleRemoveWidget(cw.instanceId)} className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded ml-1">Remove</button>
+                    </div>
+                  </div>
+                  {renderEditForm(cw)}
                 </div>
               ))}
             </div>
           )}
         </div>
 
+        {/* Section 3: Visual Preview */}
+        {[1, 2].map(pageNumber => (
+          <div key={`preview-page-${pageNumber}`} className="p-4 bg-gray-800 rounded-lg">
+            <h2 className="text-xl font-semibold mb-3">Page {pageNumber} Preview</h2>
+            <div className="grid grid-cols-2 grid-rows-2 gap-2 h-64 bg-gray-900 p-2 rounded relative"> {/* Fixed height for preview */}
+              {configuredWidgets.filter(w => w.page === pageNumber).map(widgetConfig => {
+                const [sizeRows, sizeCols] = widgetConfig.size.split('x').map(Number);
+                const gridPlacementClass = `
+                  col-start-${widgetConfig.col + 1}
+                  row-start-${widgetConfig.row + 1}
+                  col-span-${sizeCols}
+                  row-span-${sizeRows}
+                `;
+                return (
+                  <div
+                    key={`preview-${widgetConfig.instanceId}`}
+                    className={`${gridPlacementClass} bg-indigo-600/50 border-2 border-indigo-400 rounded-md flex items-center justify-center p-1 text-xs text-center overflow-hidden`}
+                  >
+                    {getWidgetNameById(widgetConfig.widgetId)} <br/> ({widgetConfig.size}) @ R{widgetConfig.row}C{widgetConfig.col}
+                  </div>
+                );
+              })}
+               {/* Overlay with slot numbers for clarity if needed */}
+              {Array.from({length:4}).map((_, idx) => (
+                <div key={`slotguide-${pageNumber}-${idx}`} className={`col-start-${(idx%2)+1} row-start-${Math.floor(idx/2)+1} border border-dashed border-gray-700 text-gray-700 text-xs flex items-center justify-center pointer-events-none`}>
+                    R{Math.floor(idx/2)}C{idx%2}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Modal for Editing Quote of the Day Content */}
+        {editingContentWidget && editingContentWidget.widgetId === 'quoteOfTheDay' && (
+          <Modal
+            isOpen={isContentModalOpen}
+            onClose={() => {
+              setIsContentModalOpen(false);
+              setEditingContentWidget(null);
+              // Clear form fields on close
+              setCurrentQuoteText('');
+              setCurrentQuoteAuthor('');
+            }}
+            title={`Set Content for: ${getWidgetNameById(editingContentWidget.widgetId)}`}
+          >
+            {/* Content for Quote of the Day */}
+            {editingContentWidget.widgetId === 'quoteOfTheDay' && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="quoteText" className="block text-sm font-medium text-gray-300 mb-1">Quote Text:</label>
+                  <textarea
+                    id="quoteText"
+                    value={currentQuoteText}
+                    onChange={(e) => setCurrentQuoteText(e.target.value)}
+                    rows={3}
+                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
+                    placeholder="Enter the quote"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="quoteAuthor" className="block text-sm font-medium text-gray-300 mb-1">Author:</label>
+                  <input
+                    type="text"
+                    id="quoteAuthor"
+                    value={currentQuoteAuthor}
+                    onChange={(e) => setCurrentQuoteAuthor(e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
+                    placeholder="Enter the author's name"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (editingContentWidget) {
+                      const textKey = `widgetContent_quoteText_${editingContentWidget.instanceId}`;
+                      const authorKey = `widgetContent_quoteAuthor_${editingContentWidget.instanceId}`;
+                      localStorage.setItem(textKey, currentQuoteText);
+                      localStorage.setItem(authorKey, currentQuoteAuthor);
+                      alert("Quote saved successfully!");
+                      setIsContentModalOpen(false);
+                      setEditingContentWidget(null);
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold"
+                >
+                  Save Quote
+                </button>
+              </div>
+            )}
+
+            {/* Content for Mood/Status */}
+            {editingContentWidget.widgetId === 'moodStatus' && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="statusText" className="block text-sm font-medium text-gray-300 mb-1">Status Text:</label>
+                  <input
+                    type="text"
+                    id="statusText"
+                    value={currentStatusText}
+                    onChange={(e) => setCurrentStatusText(e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
+                    placeholder="How are you feeling?"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="moodEmoji" className="block text-sm font-medium text-gray-300 mb-1">Mood Emoji:</label>
+                  <input
+                    type="text"
+                    id="moodEmoji"
+                    value={currentMoodEmoji}
+                    onChange={(e) => setCurrentMoodEmoji(e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"
+                    placeholder="Enter an emoji (e.g., 😊)"
+                    maxLength={5} // Allow for emoji sequences
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (editingContentWidget) {
+                      const textKey = `widgetContent_statusText_${editingContentWidget.instanceId}`;
+                      const emojiKey = `widgetContent_moodEmoji_${editingContentWidget.instanceId}`;
+                      localStorage.setItem(textKey, currentStatusText);
+                      localStorage.setItem(emojiKey, currentMoodEmoji);
+                      alert("Mood/Status saved successfully!");
+                      setIsContentModalOpen(false);
+                      setEditingContentWidget(null);
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-md font-semibold"
+                >
+                  Save Mood/Status
+                </button>
+              </div>
+            )}
+          </Modal>
+        )}
       </div>
     </AppLayout>
   );
