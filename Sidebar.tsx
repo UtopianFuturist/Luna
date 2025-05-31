@@ -134,12 +134,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               </li>
               <li>
                 <Link 
-                  href="/shapes-inc"
+                  href="/browser"
                   className="flex items-center px-4 py-3 text-white hover:bg-gray-800"
                   onClick={onClose}
                 >
                   <Globe size={20} className="mr-4" />
-                  <span>Shapes Inc. Web</span>
+                  <span>Browser</span>
                 </Link>
               </li>
               <li>

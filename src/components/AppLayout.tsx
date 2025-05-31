@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Menu, Bell, Home, Search, MessageCircle, User, Settings } from 'lucide-react';
+import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -76,14 +76,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             <Link href="/explore" className={`p-2 rounded-full ${currentPage === 'explore' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Search size={24} />
             </Link>
-            <Link href="/shapes-inc" className={`p-2 rounded-full ${currentPage === 'shapes' ? 'text-blue-500' : 'text-gray-500'}`}>
-              <Image
-                src="/shapes_logo.jpeg"
-                alt="Shapes"
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
+            <Link href="/browser" className={`flex flex-col items-center p-2 rounded-full ${pathname === '/browser' ? 'text-blue-500' : 'text-gray-500'}`}>
+              <Globe size={24} />
+              <span className="text-xs">Browser</span>
             </Link>
             <Link href="/chat" className={`p-2 rounded-full ${currentPage === 'chat' ? 'text-blue-500' : 'text-gray-500'}`}>
               <MessageCircle size={24} />
