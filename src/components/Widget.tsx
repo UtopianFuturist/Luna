@@ -5,7 +5,8 @@ import {
   Music, Users, Image as ImageIcon, Sun, BookOpen, UtensilsCrossed, HelpCircle,
   Github, Palette, MessageSquare, Send, CheckSquare, Trash2,
   BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, PlusCircle, LinkOff, Link as LinkIcon, Pin, HelpCircle as HelpCircleIcon,
-  CalendarDays, TrendingUp, TrendingDown, Minus // Added new icons
+  CalendarDays, TrendingUp, TrendingDown, Minus, // Added new icons
+  Smile, Rss, Film // Icons for new widgets
 } from 'lucide-react';
 
 interface WidgetProps {
@@ -277,34 +278,25 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
         );
       case 'stickyNote': {
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        const [note, setNote] = useState('');
+        const [noteContent, setNoteContent] = useState("No note set. Edit in settings.");
         const storageKey = `widgetContent_stickyNote_${instanceId}`;
 
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
           if (typeof window !== 'undefined') {
             const savedNote = localStorage.getItem(storageKey);
-            if (savedNote !== null) { // Check for null explicitly
-              setNote(savedNote);
-            }
+            setNoteContent(savedNote !== null ? savedNote : "No note set. Edit in settings.");
           }
-        }, [instanceId, storageKey]); // instanceId added to dep array
-
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        useEffect(() => {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(storageKey, note);
-          }
-        }, [note, storageKey]); // storageKey will change if instanceId changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [instanceId]); // storageKey is derived from instanceId, so instanceId is enough if stable per mount
 
         return (
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full h-full bg-yellow-200 text-yellow-900 p-2 rounded-md resize-none focus:ring-1 focus:ring-yellow-400 placeholder-yellow-700"
-            placeholder="Write a note..."
-            style={{ minHeight: '120px' }} // Ensure textarea has a decent default height
-          />
+          <div
+            className="w-full h-full bg-yellow-200 text-yellow-900 p-2 rounded-md overflow-y-auto"
+            style={{ whiteSpace: 'pre-wrap', minHeight: '120px', wordWrap: 'break-word' }}
+          >
+            {noteContent}
+          </div>
         );
       }
       case 'countdownTimer': {
@@ -742,6 +734,62 @@ const Widget: React.FC<WidgetProps> = ({ instanceId, widgetId, widgetName }) => 
           </div>
         );
       }
+      case 'virtualPet':
+        return (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Smile size={48} className="text-yellow-400 mb-2" />
+            <p className="text-lg font-semibold text-gray-200">Fido</p>
+            <p className="text-sm text-gray-400">Fido is happy!</p>
+          </div>
+        );
+      case 'recentBlogPosts':
+        const posts = [
+          { id: 1, title: "My First Blog Post", url: "#" },
+          { id: 2, title: "Exploring New Technologies", url: "#" },
+          { id: 3, title: "A Guide to Productive Workflows", url: "#" },
+        ];
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center text-gray-300 mb-1">
+              <Rss size={18} className="mr-2 text-orange-400" />
+              <h4 className="font-semibold text-sm">Recent Posts</h4>
+            </div>
+            <ul className="space-y-1">
+              {posts.slice(0, 3).map(post => (
+                <li key={post.id} className="text-xs">
+                  <a href={post.url} className="text-blue-400 hover:text-blue-300 hover:underline truncate">
+                    {post.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      case 'favoriteMedia':
+        const mediaItems = [
+          { id: 1, title: "Epic Adventure Movie", year: "2023", type: "Movie", coverIcon: <Film size={24} className="text-gray-500" /> },
+          { id: 2, title: "Sci-Fi Series", year: "2022", type: "Show", coverIcon: <Film size={24} className="text-red-500" /> },
+          { id: 3, title: "Documentary Film", year: "2024", type: "Movie", coverIcon: <Film size={24} className="text-blue-500" /> },
+        ];
+        return (
+          <div className="space-y-2">
+             <div className="flex items-center text-gray-300 mb-1">
+              <Film size={18} className="mr-2 text-purple-400" />
+              <h4 className="font-semibold text-sm">Favorite Media</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs text-center">
+              {mediaItems.slice(0,3).map(item => (
+                <div key={item.id} className="bg-gray-700 p-1.5 rounded-md">
+                  <div className="w-full h-16 bg-gray-600 rounded flex items-center justify-center mb-1">
+                    {item.coverIcon}
+                  </div>
+                  <p className="font-semibold text-gray-200 truncate text-[10px] leading-tight" title={item.title}>{item.title}</p>
+                  <p className="text-gray-400 text-[9px]">{item.type} ({item.year})</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
       // Keep existing cases for other widgets...
       // Add more cases as actual widget implementations are developed
       default:

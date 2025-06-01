@@ -35,7 +35,10 @@ const availableWidgets = [
   { id: 'artGallerySnippet', name: 'Art Gallery Snippet' },
   { id: 'deviceBattery', name: 'Device Battery' },
   { id: 'pinnedPostWidget', name: 'Pinned Post' },
-  // Total 30 widgets
+  { id: 'virtualPet', name: 'Virtual Pet' },
+  { id: 'recentBlogPosts', name: 'Recent Blog Posts' },
+  { id: 'favoriteMedia', name: 'Favorite Movies/Shows' },
+  // Total 33 widgets
 ];
 
 // const MAX_WIDGET_SLOTS = 8; // No longer directly used, layout drives this.
@@ -74,6 +77,14 @@ const WidgetBoardSettingsPage: React.FC = () => {
   const [currentQuickLinksList, setCurrentQuickLinksList] = useState<QuickLinkModalItem[]>([]);
   const [newQuickLinkName, setNewQuickLinkName] = useState('');
   const [newQuickLinkUrl, setNewQuickLinkUrl] = useState('');
+
+  // State for the Sticky Note form within the modal
+  const [currentStickyNoteContent, setCurrentStickyNoteContent] = useState('');
+
+  // State for the Simple To-Do List form within the modal
+  interface TodoItemModal { id: number; text: string; completed: boolean; }
+  const [currentTodoItemsList, setCurrentTodoItemsList] = useState<TodoItemModal[]>([]);
+  const [newTodoItemText, setNewTodoItemText] = useState('');
 
 
   // Load and Save configuredWidgets
@@ -359,6 +370,34 @@ const WidgetBoardSettingsPage: React.FC = () => {
                           Manage Links
                         </button>
                        )}
+                       {cw.widgetId === 'stickyNote' && (
+                        <button
+                          onClick={() => {
+                            setEditingContentWidget(cw);
+                            const noteKey = `widgetContent_stickyNote_${cw.instanceId}`;
+                            setCurrentStickyNoteContent(localStorage.getItem(noteKey) || '');
+                            setIsContentModalOpen(true);
+                          }}
+                          className="text-xs bg-yellow-600 hover:bg-yellow-700 px-2 py-1 rounded ml-1" // Different color for differentiation
+                        >
+                          Edit Note
+                        </button>
+                       )}
+                       {cw.widgetId === 'simpleTodoList' && (
+                        <button
+                          onClick={() => {
+                            setEditingContentWidget(cw);
+                            const todoKey = `widgetContent_todoItems_${cw.instanceId}`;
+                            const savedTodos = localStorage.getItem(todoKey);
+                            setCurrentTodoItemsList(savedTodos ? JSON.parse(savedTodos) : []);
+                            setNewTodoItemText('');
+                            setIsContentModalOpen(true);
+                          }}
+                          className="text-xs bg-indigo-500 hover:bg-indigo-600 px-2 py-1 rounded ml-1"
+                        >
+                          Manage Tasks
+                        </button>
+                       )}
                        <button onClick={() => handleRemoveWidget(cw.instanceId)} className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded ml-1">Remove</button>
                     </div>
                   </div>
@@ -414,7 +453,7 @@ const WidgetBoardSettingsPage: React.FC = () => {
             }}
             title={`Set Content for: ${getWidgetNameById(editingContentWidget.widgetId)}`}
           >
-            {/* ... existing forms for quote and mood ... */}
+            {/* ... existing forms ... */}
             {editingContentWidget.widgetId === 'quoteOfTheDay' && (
               <div className="space-y-4">
                 <div>
@@ -457,9 +496,9 @@ const WidgetBoardSettingsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Content for Quick Links */}
             {editingContentWidget.widgetId === 'quickLinks' && (
               <div className="space-y-3 text-sm">
+                {/* ... Quick Links form ... */}
                 <div className="space-y-1">
                   <label htmlFor="newLinkNameModal" className="block text-xs font-medium text-gray-300">Link Name:</label>
                   <input type="text" id="newLinkNameModal" value={newQuickLinkName} onChange={(e) => setNewQuickLinkName(e.target.value)} placeholder="e.g., My Portfolio" className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
@@ -468,32 +507,53 @@ const WidgetBoardSettingsPage: React.FC = () => {
                   <label htmlFor="newLinkUrlModal" className="block text-xs font-medium text-gray-300">Link URL:</label>
                   <input type="url" id="newLinkUrlModal" value={newQuickLinkUrl} onChange={(e) => setNewQuickLinkUrl(e.target.value)} placeholder="https://example.com" className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
                 </div>
+                <button onClick={() => { if (newQuickLinkName.trim() && newQuickLinkUrl.trim()) { if (!newQuickLinkUrl.startsWith('http://') && !newQuickLinkUrl.startsWith('https://')) { alert('URL must start with http:// or https://'); return; } setCurrentQuickLinksList(prev => [...prev, {id: Date.now().toString(), name: newQuickLinkName, url: newQuickLinkUrl}]); setNewQuickLinkName(''); setNewQuickLinkUrl(''); } else { alert('Please fill name and URL.'); } }} className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-md text-xs flex items-center justify-center"> Add New Link </button>
+                <hr className="border-gray-600 my-2"/>
+                <h4 className="text-xs font-medium text-gray-400 mb-1">Current Links:</h4>
+                {currentQuickLinksList.length === 0 ? <p className="text-xs text-gray-500 italic">No links added yet.</p> : ( <ul className="space-y-1 max-h-32 overflow-y-auto"> {currentQuickLinksList.map(link => ( <li key={link.id} className="flex items-center justify-between p-1 bg-gray-600 rounded-md"> <span className="truncate text-gray-300" title={`${link.name} (${link.url})`}>{link.name}</span> <button onClick={() => setCurrentQuickLinksList(prev => prev.filter(l => l.id !== link.id))} className="text-red-500 hover:text-red-400 p-0.5 text-xs">Delete</button> </li> ))} </ul> )}
+                <button onClick={() => { if (editingContentWidget) { localStorage.setItem(`widgetContent_quickLinks_links_${editingContentWidget.instanceId}`, JSON.stringify(currentQuickLinksList)); alert("Links saved!"); setIsContentModalOpen(false); setEditingContentWidget(null); } }} className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold">Save All Links</button>
+              </div>
+            )}
+
+            {editingContentWidget.widgetId === 'stickyNote' && (
+              <div className="space-y-4">
+                {/* ... Sticky Note form ... */}
+                <div>
+                  <label htmlFor="stickyNoteContentModal" className="block text-sm font-medium text-gray-300 mb-1">Note Content:</label>
+                  <textarea id="stickyNoteContentModal" value={currentStickyNoteContent} onChange={(e) => setCurrentStickyNoteContent(e.target.value)} rows={5} className="w-full p-2 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500" placeholder="Enter your note..."/>
+                </div>
+                <button onClick={() => { if (editingContentWidget) { localStorage.setItem(`widgetContent_stickyNote_${editingContentWidget.instanceId}`, currentStickyNoteContent); alert("Note saved!"); setIsContentModalOpen(false); setEditingContentWidget(null); } }} className="w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 rounded-md font-semibold">Save Note</button>
+              </div>
+            )}
+
+            {/* Content for Simple To-Do List */}
+            {editingContentWidget.widgetId === 'simpleTodoList' && (
+              <div className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <label htmlFor="newTodoItemTextModal" className="block text-xs font-medium text-gray-300">New Task:</label>
+                  <input type="text" id="newTodoItemTextModal" value={newTodoItemText} onChange={(e) => setNewTodoItemText(e.target.value)} placeholder="Enter task description" className="w-full p-1.5 bg-gray-700 text-white rounded-md focus:ring-1 focus:ring-blue-500"/>
+                </div>
                 <button
                   onClick={() => {
-                    if (newQuickLinkName.trim() && newQuickLinkUrl.trim()) {
-                      if (!newQuickLinkUrl.startsWith('http://') && !newQuickLinkUrl.startsWith('https://')) {
-                        alert('Please enter a valid URL (starting with http:// or https://)');
-                        return;
-                      }
-                      setCurrentQuickLinksList(prev => [...prev, {id: Date.now().toString(), name: newQuickLinkName, url: newQuickLinkUrl}]);
-                      setNewQuickLinkName('');
-                      setNewQuickLinkUrl('');
+                    if (newTodoItemText.trim()) {
+                      setCurrentTodoItemsList(prev => [...prev, {id: Date.now(), text: newTodoItemText, completed: false}]);
+                      setNewTodoItemText('');
                     } else {
-                      alert('Please fill in both name and URL for the link.');
+                      alert('Please enter task text.');
                     }
                   }}
                   className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-md text-xs flex items-center justify-center"
                 >
-                  Add New Link
+                  Add Task
                 </button>
                 <hr className="border-gray-600 my-2"/>
-                <h4 className="text-xs font-medium text-gray-400 mb-1">Current Links:</h4>
-                {currentQuickLinksList.length === 0 ? <p className="text-xs text-gray-500 italic">No links added yet.</p> : (
+                <h4 className="text-xs font-medium text-gray-400 mb-1">Current Tasks:</h4>
+                {currentTodoItemsList.length === 0 ? <p className="text-xs text-gray-500 italic">No tasks yet.</p> : (
                   <ul className="space-y-1 max-h-32 overflow-y-auto">
-                    {currentQuickLinksList.map(link => (
-                      <li key={link.id} className="flex items-center justify-between p-1 bg-gray-600 rounded-md">
-                        <span className="truncate text-gray-300" title={`${link.name} (${link.url})`}>{link.name}</span>
-                        <button onClick={() => setCurrentQuickLinksList(prev => prev.filter(l => l.id !== link.id))} className="text-red-500 hover:text-red-400 p-0.5 text-xs">Delete</button>
+                    {currentTodoItemsList.map(item => (
+                      <li key={item.id} className="flex items-center justify-between p-1 bg-gray-600 rounded-md">
+                        <span className={`truncate text-gray-300 ${item.completed ? 'line-through' : ''}`} title={item.text}>{item.text}</span>
+                        <button onClick={() => setCurrentTodoItemsList(prev => prev.filter(t => t.id !== item.id))} className="text-red-500 hover:text-red-400 p-0.5 text-xs">Delete</button>
                       </li>
                     ))}
                   </ul>
@@ -501,22 +561,24 @@ const WidgetBoardSettingsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (editingContentWidget) {
-                      const linksKey = `widgetContent_quickLinks_links_${editingContentWidget.instanceId}`;
-                      localStorage.setItem(linksKey, JSON.stringify(currentQuickLinksList));
-                      alert("Links saved successfully!");
+                      const todoKey = `widgetContent_todoItems_${editingContentWidget.instanceId}`;
+                      localStorage.setItem(todoKey, JSON.stringify(currentTodoItemsList));
+                      alert("Task list updated!");
                       setIsContentModalOpen(false);
                       setEditingContentWidget(null);
                     }
                   }}
-                  className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold"
+                  className="w-full mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md font-semibold"
                 >
-                  Save All Links
+                  Save Task List
                 </button>
               </div>
             )}
           </Modal>
         )}
       </div>
+    </AppLayout>
+    </AppLayout>
     </AppLayout>
     </AppLayout>
     </AppLayout>
