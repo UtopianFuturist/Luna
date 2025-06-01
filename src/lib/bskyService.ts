@@ -1,12 +1,50 @@
-import { BskyAgent, AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // Removed AppBskyActorPreferences
+import {
+  BskyAgent,
+  AppBskyActorDefs,
+  AppBskyFeedDefs,
+  AppBskyNotificationListNotifications,
+  ChatBskyConvoDefs, // Import for chat conversation definitions
+  ChatBskyActorDefs  // Import for chat actor definitions (like declaration)
+} from '@atproto/api';
 
 // Re-exporting for convenience if these types are needed by consumers of this service
 export type ProfileViewDetailed = AppBskyActorDefs.ProfileViewDetailed;
+// Re-exporting Notification type for use in UI components
+export type Notification = AppBskyNotificationListNotifications.Notification;
 export type FeedViewPost = AppBskyFeedDefs.FeedViewPost;
 export type GeneratorView = AppBskyFeedDefs.GeneratorView;
 export type ActorPreference = AppBskyActorDefs.Preference; // General preference type
 export type SavedFeedsPref = AppBskyActorDefs.SavedFeedsPref; // Specific preference type for saved feeds
 export type PersonalDetailsPref = AppBskyActorDefs.PersonalDetailsPref; // Specific preference type for personal details
+
+export interface FeedPage {
+  feed: FeedViewPost[];
+  cursor?: string;
+}
+
+// Interface for the listNotifications response to match SDK structure
+export interface NotificationsPage {
+  notifications: Notification[]; // Using the re-exported Notification type
+  cursor?: string;
+  // seenAt?: string; // listNotifications itself doesn't return seenAt, but updateSeen uses it.
+}
+
+// --- Chat Service Types ---
+export type ConvoView = ChatBskyConvoDefs.ConvoView;
+export type MessageView = ChatBskyConvoDefs.MessageView; // This is likely a union: MessageView | DeletedMessageView etc.
+export type MessageViewSent = ChatBskyConvoDefs.MessageViewSent;
+export type LogBeginConvo = ChatBskyConvoDefs.LogBeginConvo; // Example if needed for logs
+
+export interface ConvosPage {
+  convos: ConvoView[];
+  cursor?: string;
+}
+export interface MessagesPage {
+  messages: MessageView[]; // Array of MessageView or union types
+  cursor?: string;
+}
+export type ActorDeclaration = ChatBskyActorDefs.Declaration;
+
 
 /**
  * Fetches a user's detailed profile.
@@ -20,6 +58,79 @@ export const getProfile = async (agent: BskyAgent, handleOrDid: string): Promise
     return data;
   } catch (error) {
     console.error(`Error fetching profile for ${handleOrDid}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches a specific author's feed (posts by the author).
+ * @param agent Initialized BskyAgent
+ * @param actor DID or handle of the author
+ * @param cursor Cursor for pagination
+ * @param limit Number of items to fetch
+ * @returns Promise<FeedPage>
+ */
+export const getAuthorFeed = async (agent: BskyAgent, actor: string, cursor?: string, limit: number = 25): Promise<FeedPage> => {
+  try {
+    const { data } = await agent.app.bsky.feed.getAuthorFeed({ actor, limit, cursor });
+    return data as FeedPage; // Assuming the SDK's response structure matches FeedPage { feed, cursor? }
+  } catch (error) {
+    console.error(`Error fetching author feed for ${actor}:`, error);
+    throw error;
+  }
+};
+
+
+// --- Notification Service Functions ---
+
+/**
+ * Fetches a list of notifications for the authenticated user.
+ * @param agent Initialized BskyAgent
+ * @param cursor Cursor for pagination
+ * @param limit Number of items to fetch (default 20, max 100)
+ * @returns Object containing an array of notifications and an optional cursor
+ */
+export const listNotifications = async (agent: BskyAgent, cursor?: string, limit: number = 30): Promise<NotificationsPage> => {
+  try {
+    const { data } = await agent.app.bsky.notification.listNotifications({
+      limit: Math.min(limit, 100), // Enforce maximum limit
+      cursor
+    });
+    // Ensure the returned data matches the NotificationsPage structure.
+    // The SDK's data should be directly compatible if Notification type is from AppBskyNotificationListNotifications.
+    return data as NotificationsPage;
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches the count of unread notifications for the authenticated user.
+ * @param agent Initialized BskyAgent
+ * @returns Object containing the count of unread notifications
+ */
+export const getUnreadCount = async (agent: BskyAgent): Promise<{ count: number }> => {
+  try {
+    const { data } = await agent.app.bsky.notification.getUnreadCount();
+    return data;
+  } catch (error) {
+    console.error("Error fetching unread notification count:", error);
+    throw error;
+  }
+};
+
+/**
+ * Marks notifications as seen for the authenticated user.
+ * @param agent Initialized BskyAgent
+ * @param seenAt Optional ISO 8601 timestamp. If not provided, server typically uses current time.
+ * @returns Promise resolving when notifications have been marked as seen
+ */
+export const updateSeen = async (agent: BskyAgent, seenAt?: string): Promise<void> => {
+  try {
+    await agent.app.bsky.notification.updateSeen({ seenAt: seenAt || new Date().toISOString() });
+  } catch (error) {
+    console.error("Error updating notification seen time:", error);
     throw error;
   }
 };
@@ -63,16 +174,16 @@ export const getFeedGenerators = async (agent: BskyAgent, feedUris: string[]): P
  * @param feedUri AT URI of the feed generator
  * @param cursor Cursor for pagination
  * @param limit Number of items to fetch (default 20)
- * @returns Array of feed view posts
+ * @returns Object containing an array of feed posts and an optional cursor for pagination
  */
-export const getFeed = async (agent: BskyAgent, feedUri: string, cursor?: string, limit: number = 20): Promise<FeedViewPost[]> => {
+export const getFeed = async (agent: BskyAgent, feedUri: string, cursor?: string, limit: number = 20): Promise<FeedPage> => {
   try {
     const { data } = await agent.app.bsky.feed.getFeed({
       feed: feedUri,
       cursor,
       limit,
     });
-    return data.feed;
+    return data; // Return the whole data object { feed, cursor? }
   } catch (error) {
     console.error(`Error fetching feed ${feedUri}:`, error);
     throw error;
