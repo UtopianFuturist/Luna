@@ -12,6 +12,7 @@ const categorizedLinks = [
       { name: "Google Gemini", url: "https://gemini.google.com" },
       { name: "Anthropic Claude", url: "https://claude.ai" },
       { name: "WebSim", url: "https://websim.ai" },
+      { "name": "Google Jules", "url": "https://ai.google/" }
     ],
   },
   {
