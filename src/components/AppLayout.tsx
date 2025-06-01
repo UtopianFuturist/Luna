@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe } from 'lucide-react';
+import Link from 'next/link'; // Already present, ensure it's used for feeds
+import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe, Hash } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { BrowserAudioContext } from '../contexts/BrowserAudioContext'; // Adjust path if needed
+import { BrowserAudioContext } from '../contexts/BrowserAudioContext';
 import UserMenu from './UserMenu';
+import { getPreferences, getFeedGenerators } from '@/lib/bskyService'; // Service imports
+import type { AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // Type imports
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -24,8 +26,53 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated, session } = useAuth();
+  const { agent, isAuthenticated, session } = useAuth(); // Added agent
   const browserAudioCtx = useContext(BrowserAudioContext);
+
+  // State for pinned feeds
+  const [pinnedFeeds, setPinnedFeeds] = useState<AppBskyFeedDefs.GeneratorView[]>([]);
+  const [isLoadingFeeds, setIsLoadingFeeds] = useState<boolean>(false);
+  const [feedError, setFeedError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserFeeds = async () => {
+      if (!isAuthenticated || !agent) {
+        setPinnedFeeds([]);
+        setIsLoadingFeeds(false);
+        return;
+      }
+
+      setIsLoadingFeeds(true);
+      setFeedError(null);
+      try {
+        // Step A: Fetch Preferences
+        const prefs = await getPreferences(agent);
+        const savedFeedsPref = prefs.find(
+          (p): p is AppBskyActorDefs.SavedFeedsPref => p.$type === 'app.bsky.actor.defs#savedFeeds'
+        );
+
+        if (savedFeedsPref && savedFeedsPref.pinned && savedFeedsPref.pinned.length > 0) {
+          // Step B: Fetch Feed Generator Details
+          const feedUris = savedFeedsPref.pinned;
+          console.log("Pinned feed URIs:", feedUris);
+          const { feeds: feedGeneratorViews } = await getFeedGenerators(agent, feedUris);
+          setPinnedFeeds(feedGeneratorViews);
+          console.log("Fetched Pinned Feeds:", feedGeneratorViews);
+        } else {
+          setPinnedFeeds([]); // No pinned feeds or preference not found
+        }
+      } catch (err) {
+        console.error("Error fetching feeds:", err);
+        setFeedError(err instanceof Error ? err.message : "Unknown error fetching feeds.");
+        setPinnedFeeds([]);
+      } finally {
+        setIsLoadingFeeds(false);
+      }
+    };
+
+    fetchUserFeeds();
+  }, [agent, isAuthenticated]);
+
 
   if (!browserAudioCtx) {
     // This should not happen if provider is correctly placed at the root
@@ -44,18 +91,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
       {showHeader && (
-        <header className="sticky top-0 z-40 bg-black border-b border-gray-800">
-          <div className="flex items-center justify-between p-3">
-            <div className="flex items-center">
-              {showSidebarButton && (
-                <button className="p-2 rounded-full hover:bg-gray-800">
-                  <Menu size={20} />
-                </button>
-              )}
-              <h1 className="text-xl font-bold ml-2">{currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}</h1>
-            </div>
-            <div className="relative">
-              <button
+        <>
+          <header className="sticky top-0 z-40 bg-black border-b border-gray-800">
+            <div className="flex items-center justify-between p-3 h-14"> {/* Added h-14 for explicit height */}
+              <div className="flex items-center">
+                {/* Sidebar button is moved to the new nav bar below */}
+                <h1 className="text-xl font-bold ml-2">{currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}</h1>
+              </div>
+              <div className="relative">
+                <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="p-1 rounded-full hover:bg-gray-800"
               >
@@ -68,36 +112,83 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 />
               </button>
               <UserMenu isOpen={userMenuOpen} onClose={() => setUserMenuOpen(false)} />
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+          {/* New Top Navigation Bar for Feeds */}
+          {/* This bar is sticky below the main header. Adjust top-14 if main header height changes. */}
+          <nav className="sticky top-14 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700 px-3 py-2 flex items-center justify-between h-12">
+            {/* Left: Sidebar Toggle */}
+            {showSidebarButton && (
+              <button className="p-2 rounded-full hover:bg-gray-700">
+                <Menu size={20} />
+              </button>
+            )}
+            {!showSidebarButton && <div className="w-10"></div>} {/* Placeholder to maintain layout if no button */}
+
+            {/* Center: Feeds Area */}
+            <div className="flex-grow text-center text-sm text-gray-300 px-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+              {isLoadingFeeds ? (
+                <span>Loading feeds...</span>
+              ) : feedError ? (
+                <span className="text-red-400">Error: {feedError.substring(0,50)}...</span>
+              ) : pinnedFeeds.length > 0 ? (
+                pinnedFeeds.map((feed, index) => (
+                  <React.Fragment key={feed.uri}>
+                    <Link href={`/feeds?uri=${encodeURIComponent(feed.uri)}`} legacyBehavior>
+                      <a className="hover:text-sky-400 cursor-pointer px-2 py-1 rounded hover:bg-gray-700/50 transition-colors duration-150">
+                        {feed.displayName}
+                      </a>
+                    </Link>
+                    {index < pinnedFeeds.length - 1 && <span className="text-gray-600 mx-1 select-none">|</span>}
+                  </React.Fragment>
+                ))
+              ) : (
+                <>
+                  {/* Default links if no pinned feeds, can also be Link components if they go somewhere */}
+                  <span className="px-2 py-1 cursor-default">My Feed</span>
+                  <span className="text-gray-600 mx-1 select-none">|</span>
+                  <span className="px-2 py-1 cursor-default">Discover</span>
+                </>
+              )}
+            </div>
+
+            {/* Right: Feed Management Button */}
+            <button className="p-2 rounded-full hover:bg-gray-700 flex items-center space-x-1 text-sm">
+              <Hash size={18} />
+              <span>Manage</span>
+            </button>
+          </nav>
+        </>
       )}
 
-      <main className="flex-grow">{children}</main>
+      {/* Adjust flex-grow based on whether the bottom tab bar is hidden or not, and if the new top nav is present */}
+      <main className={`flex-grow ${!hideTabBar ? 'pb-12' : ''} ${showHeader ? 'pt-0' : ''}`}>{children}</main>
 
       {!hideTabBar && (
-        <nav className="sticky bottom-0 z-40 bg-black border-t border-gray-800">
+        <nav className="sticky bottom-0 z-40 bg-black border-t border-gray-800"> {/* Ensure this nav is z-40 if new top nav is z-30 */}
           <div className="flex justify-around py-2">
-            <Link href="/" className={`p-2 rounded-full ${currentPage === 'home' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Link href="/" className={`p-2 rounded-full ${pathname === '/' ? 'text-blue-500' : 'text-gray-500'}`}> {/* Changed currentPage to pathname for home */}
               <Home size={24} />
             </Link>
-            <Link href="/explore" className={`p-2 rounded-full ${currentPage === 'explore' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Link href="/explore" className={`p-2 rounded-full ${pathname.startsWith('/explore') ? 'text-blue-500' : 'text-gray-500'}`}> {/* Used startsWith for explore */}
               <Search size={24} />
             </Link>
             <Link href="/browser" className={`flex flex-col items-center p-2 rounded-full ${pathname === '/browser' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Globe size={24} />
               <span className="text-xs">Browser</span>
             </Link>
-            <Link href="/chat" className={`p-2 rounded-full ${currentPage === 'chat' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Link href="/chat" className={`p-2 rounded-full ${pathname.startsWith('/chat') ? 'text-blue-500' : 'text-gray-500'}`}> {/* Used startsWith for chat */}
               <MessageCircle size={24} />
             </Link>
-            <Link href="/notifications" className={`p-2 rounded-full ${currentPage === 'notifications' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Link href="/notifications" className={`p-2 rounded-full ${pathname === '/notifications' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Bell size={24} />
             </Link>
-            <Link href="/create-account" className={`p-2 rounded-full ${currentPage === 'create' ? 'text-blue-500' : 'text-gray-500'}`}>
+             {/* Changed Settings link to point to BlueSky Settings */}
+            <Link href="/bsky-settings" className={`p-2 rounded-full ${pathname.startsWith('/bsky-settings') ? 'text-blue-500' : 'text-gray-500'}`}>
               <Settings size={24} />
             </Link>
-            <Link href="/profile" className={`p-2 rounded-full ${currentPage === 'profile' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Link href="/profile" className={`p-2 rounded-full ${pathname === '/profile' ? 'text-blue-500' : 'text-gray-500'}`}>
               <User size={24} />
             </Link>
           </div>
