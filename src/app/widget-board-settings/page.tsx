@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import AppLayout from '@/src/components/AppLayout';
+import AppLayout from '../../components/AppLayout';
 import Modal from '@/components/Modal'; // Import the Modal component
 
 const availableWidgets = [
