@@ -4,8 +4,8 @@ services:
     env: node: "20"
     region: frankfurt
     plan: free
-    buildCommand: "corepack enable && corepack prepare pnpm@10.0.0-rc.2 --activate && corepack pnpm install --frozen-lockfile && corepack pnpm build"
-    startCommand: "corepack pnpm start"
+    buildCommand: "yarn install --frozen-lockfile && yarn build"
+    startCommand: "yarn start"
     healthCheckPath: "/"
     envVars:
       - key: NODE_ENV
