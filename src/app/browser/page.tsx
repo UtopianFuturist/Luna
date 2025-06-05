@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useContext } from 'react'; // Added useContext
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { BrowserAudioContext } from '../../contexts/BrowserAudioContext'; // Adjust path
 
 const categorizedLinks = [

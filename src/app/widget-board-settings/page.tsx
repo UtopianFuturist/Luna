@@ -578,10 +578,6 @@ const WidgetBoardSettingsPage: React.FC = () => {
         )}
       </div>
     </AppLayout>
-    </AppLayout>
-    </AppLayout>
-    </AppLayout>
-    </AppLayout>
   );
 };
 

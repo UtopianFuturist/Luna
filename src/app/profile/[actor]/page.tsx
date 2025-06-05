@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProfile, getAuthorFeed, FeedViewPost, FeedPage } from '@/lib/bskyService'; // Added getAuthorFeed, FeedViewPost, FeedPage
 import type { AppBskyActorDefs, AppBskyEmbedImages, AppBskyEmbedExternal, AppBskyEmbedRecord, AppBskyEmbedRecordWithMedia, AppBskyRichtextFacet } from '@atproto/api'; // Added embed types

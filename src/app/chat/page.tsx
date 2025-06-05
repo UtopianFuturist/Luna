@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { listConvos, ConvoView, ConvosPage } from '@/lib/bskyService';
 import { MessageSquarePlus, Users, BellOff, Bell } from 'lucide-react';

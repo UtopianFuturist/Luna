@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // useRouter for back button
 import Link from 'next/link';
 import Image from 'next/image';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getMessages,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPreferences, setPreferences, getProfile, updateProfileDetails } from '@/lib/bskyService';
 import type { AppBskyActorDefs } from '@atproto/api';

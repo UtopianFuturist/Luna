@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/AppLayout'; // Assuming AppLayout is in src/components
+import AppLayout from '@/components/AppLayout'; // Assuming AppLayout is in src/components
 import Widget from '@/components/Widget'; // Import the Widget component
 
 // Define available widgets (should match the one in settings page for consistency)

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { listNotifications, updateSeen, Notification, NotificationsPage } from '@/lib/bskyService';
 import { Heart, Repeat2, UserPlus, MessageCircle, AtSign, Quote, AlertCircle, CheckCircle } from 'lucide-react'; // Added AlertCircle, CheckCircle

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link'; // Added for mentions and tags
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFeed, FeedPage, FeedViewPost } from '@/lib/bskyService';
 import { processFacets, ProcessedRichTextSegment } from '@/utils/richtextProcessor'; // Import richtext processor
