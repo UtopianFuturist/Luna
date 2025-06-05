@@ -1,4 +1,5 @@
 import { NextConfig } from 'next'
+import path from 'path'
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -8,10 +9,15 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  output: "export",
+  // Disabling static export to support dynamic routes
+  // output: "export",
   images: {
     unoptimized: true,
   },
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname, './')
+    return config
+  }
 }
 
 export default nextConfig

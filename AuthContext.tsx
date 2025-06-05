@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BskyAgent } from '@atproto/api';
-import { parseSubject, SubjectType, isValidSubject, formatSubjectForDisplay } from '@/utils/subjectResolver';
+import { parseSubject, SubjectType, isValidSubject, formatSubjectForDisplay } from './subjectResolver';
 
 interface AuthContextType {
   isAuthenticated: boolean;
