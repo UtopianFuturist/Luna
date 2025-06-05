@@ -1,4 +1,5 @@
 {
+  "installCommand": "pnpm install",
   "builds": [
     {
       "src": "package.json",
