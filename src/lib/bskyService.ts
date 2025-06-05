@@ -45,6 +45,91 @@ export interface MessagesPage {
 }
 export type ActorDeclaration = ChatBskyActorDefs.Declaration;
 
+// --- Chat Service Functions ---
+
+/**
+ * Fetches the list of conversations for the authenticated user.
+ * @param agent Initialized BskyAgent
+ * @param cursor Cursor for pagination
+ * @param limit Number of items to fetch (default 30)
+ * @returns Object containing an array of conversations and an optional cursor
+ */
+export const listConvos = async (agent: BskyAgent, cursor?: string, limit: number = 30): Promise<ConvosPage> => {
+  try {
+    const { data } = await agent.api.chat.bsky.convo.listConvos({
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return data as ConvosPage;
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches details for a specific conversation.
+ * @param agent Initialized BskyAgent
+ * @param convoId The conversation ID
+ * @returns The conversation view
+ */
+export const getConvo = async (agent: BskyAgent, convoId: string): Promise<ConvoView> => {
+  try {
+    const { data } = await agent.api.chat.bsky.convo.getConvo({
+      convoId
+    });
+    return data.convo;
+  } catch (error) {
+    console.error(`Error fetching conversation ${convoId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches messages for a specific conversation.
+ * @param agent Initialized BskyAgent
+ * @param convoId The conversation ID
+ * @param cursor Cursor for pagination
+ * @param limit Number of items to fetch (default 30)
+ * @returns Object containing an array of messages and an optional cursor
+ */
+export const getMessages = async (agent: BskyAgent, convoId: string, cursor?: string, limit: number = 30): Promise<MessagesPage> => {
+  try {
+    const { data } = await agent.api.chat.bsky.convo.getMessages({
+      convoId,
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return data as MessagesPage;
+  } catch (error) {
+    console.error(`Error fetching messages for conversation ${convoId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Sends a message to a specific conversation.
+ * @param agent Initialized BskyAgent
+ * @param convoId The conversation ID
+ * @param text The message text
+ * @returns The sent message view
+ */
+export const sendMessage = async (agent: BskyAgent, convoId: string, text: string): Promise<MessageViewSent> => {
+  try {
+    const { data } = await agent.api.chat.bsky.convo.sendMessage({
+      convoId,
+      message: {
+        text,
+        $type: 'chat.bsky.convo.defs#messageInput'
+      }
+    });
+    return data;
+  } catch (error) {
+    console.error(`Error sending message to conversation ${convoId}:`, error);
+    throw error;
+  }
+};
+
 
 /**
  * Fetches a user's detailed profile.
