@@ -47,7 +47,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.364.0",
@@ -78,12 +78,15 @@
     "tailwindcss": "^3.4.1",
     "turbo": "^2.3.3",
     "typescript": "^5",
-    "wrangler": "^3.102.0"
+    "wrangler": "^3.63.0"
   },
-  "pnpm": {
-    "overrides": {
-      "cmdk>react": "^19.0.0",
-      "cmdk>react-dom": "^19.0.0"
-    }
+  "resolutions": {
+    "cmdk/react": "19.0.0",
+    "cmdk/react-dom": "19.0.0",
+    "@radix-ui/react-dialog/react": "19.0.0",
+    "@radix-ui/react-dialog/react-dom": "19.0.0",
+    "@radix-ui/react-primitive/react": "19.0.0",
+    "@radix-ui/react-primitive/react-dom": "19.0.0",
+    "lucide-react/react": "19.0.0"
   }
 }
