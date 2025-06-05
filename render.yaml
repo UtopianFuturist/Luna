@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: custom-bluesky-client
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: "pnpm install --frozen-lockfile && pnpm build"
+    startCommand: "pnpm start"
+    healthCheckPath: "/"
+    envVars:
+      - key: NODE_ENV
+        value: production
