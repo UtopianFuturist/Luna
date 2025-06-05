@@ -1,11 +1,11 @@
 services:
   - type: web
     name: custom-bluesky-client
-    env: node
+    env: node: "20"
     region: frankfurt
     plan: free
-    buildCommand: "corepack enable && corepack prepare pnpm@10.0.0-rc.2 --activate && pnpm install --frozen-lockfile && pnpm build"
-    startCommand: "pnpm start"
+    buildCommand: "corepack enable && corepack prepare pnpm@10.0.0-rc.2 --activate && corepack pnpm install --frozen-lockfile && corepack pnpm build"
+    startCommand: "corepack pnpm start"
     healthCheckPath: "/"
     envVars:
       - key: NODE_ENV
