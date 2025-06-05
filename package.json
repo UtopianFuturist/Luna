@@ -81,12 +81,7 @@
     "wrangler": "^3.63.0"
   },
   "resolutions": {
-    "cmdk/react": "19.0.0",
-    "cmdk/react-dom": "19.0.0",
-    "@radix-ui/react-dialog/react": "19.0.0",
-    "@radix-ui/react-dialog/react-dom": "19.0.0",
-    "@radix-ui/react-primitive/react": "19.0.0",
-    "@radix-ui/react-primitive/react-dom": "19.0.0",
-    "lucide-react/react": "19.0.0"
+    "**/react": "19.0.0",
+    "**/react-dom": "19.0.0"
   }
 }
