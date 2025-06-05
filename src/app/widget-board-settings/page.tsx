@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppLayout } from '@/components/AppLayout';
+import { AppLayout } from '@/src/components/AppLayout';
 import Modal from '@/components/Modal'; // Import the Modal component
 
 const availableWidgets = [
@@ -581,60 +581,6 @@ const WidgetBoardSettingsPage: React.FC = () => {
     </AppLayout>
     </AppLayout>
     </AppLayout>
-    </AppLayout>
-  );
-};
-
-export default WidgetBoardSettingsPage;
-    setSelectedWidgets(prevSelected => {
-      if (prevSelected.includes(widgetId)) {
-        return prevSelected.filter(id => id !== widgetId);
-      } else {
-        if (prevSelected.length < 8) {
-          return [...prevSelected, widgetId];
-        } else {
-          alert("You can select up to 8 widgets.");
-          return prevSelected;
-        }
-      }
-    });
-  };
-
-  return (
-    <AppLayout currentPage="Widget Settings" showSidebarButton={true}>
-      <div className="p-4 text-white">
-        <h1 className="text-2xl font-bold mb-4">Customize Your Widget Board</h1>
-
-        <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-          <h2 className="text-xl font-semibold mb-3">Select Widgets ({selectedWidgets.length} / 8)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {availableWidgets.map(widget => (
-              <label key={widget.id} className="flex items-center space-x-2 p-3 bg-gray-700 rounded-md hover:bg-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="form-checkbox h-5 w-5 text-blue-500 bg-gray-800 border-gray-600 rounded focus:ring-blue-500"
-                  checked={selectedWidgets.includes(widget.id)}
-                  onChange={() => handleWidgetSelection(widget.id)}
-                />
-                <span>{widget.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Future UI for reordering/layout customization will go here */}
-        {/* For example, a preview of the widget board */}
-        {/* <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-3">Selected Widgets Preview:</h2>
-          <ul>
-            {selectedWidgets.map(id => {
-              const widget = availableWidgets.find(w => w.id === id);
-              return <li key={id}>{widget?.name}</li>;
-            })}
-          </ul>
-        </div> */}
-
-      </div>
     </AppLayout>
   );
 };
