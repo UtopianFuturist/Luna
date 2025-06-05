@@ -11,9 +11,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:worker": "opennextjs-cloudflare",
-    "preview": "opennextjs-cloudflare && wrangler dev",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv env.d.ts"
+    // "build:worker": "opennextjs-cloudflare",
+    // "preview": "opennextjs-cloudflare && wrangler dev",
+    // "cf-typegen": "wrangler types --env-interface CloudflareEnv env.d.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.15.6",
