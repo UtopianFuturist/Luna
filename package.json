@@ -82,6 +82,8 @@
   },
   "resolutions": {
     "**/react": "19.0.0",
-    "**/react-dom": "19.0.0"
+    "**/react-dom": "19.0.0",
+    "rollup-plugin-node-polyfills/rollup-plugin-inject": "npm:@rollup/plugin-inject@5.0.5",
+    "magic-string/sourcemap-codec": "npm:@jridgewell/sourcemap-codec@1.4.15"
   }
 }
