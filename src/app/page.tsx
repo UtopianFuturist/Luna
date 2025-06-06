@@ -69,45 +69,55 @@ const RecordEmbedDisplay: React.FC<{ recordView: AppBskyEmbedRecord.View }> = ({
 // End Embed Components
 
 const HomePage: React.FC = () => {
-  const { agent, isAuthenticated, session } = useAuth(); // Added session to get user's DID
+  // Use `authIsLoading` from useAuth to differentiate from page's own data loading state.
+  const { agent, isAuthenticated, isLoading: authIsLoading, session } = useAuth();
 
-  // State for the default "Following" feed URI
   const [feedUri, setFeedUri] = useState<string | null>(null);
-
   const [posts, setPosts] = useState<FeedViewPost[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start true
+  // `pageIsLoading` now reflects the page's data fetching, not auth loading.
+  const [pageIsLoading, setPageIsLoading] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (isAuthenticated && agent?.session?.did) {
-      // Construct the "Following" feed URI for the logged-in user
-      const defaultFollowingUri = `at://${agent.session.did}/app.bsky.feed.generator/home`;
-      setFeedUri(defaultFollowingUri);
-    } else if (!isAuthenticated && !isLoading) {
-        // If not authenticated and not already loading session state,
-        // this page shouldn't be shown (ProtectedRoute would redirect).
-        // But if somehow reached, indicate to log in.
+    // This effect determines the feed URI based on auth state.
+    // It should only run when auth state (authIsLoading, isAuthenticated, agent) changes.
+    if (!authIsLoading) { // Only proceed if auth state determination is complete
+      if (isAuthenticated && agent?.session?.did) {
+        const defaultFollowingUri = `at://${agent.session.did}/app.bsky.feed.generator/home`;
+        setFeedUri(defaultFollowingUri);
+        setError(null); // Clear previous errors like "Please log in"
+      } else if (isAuthenticated && (!agent?.session?.did)) {
+        // This case should ideally not happen if login process populates session correctly.
+        setError("Your user ID could not be determined. Unable to load feed.");
+        setPageIsLoading(false); // Stop page loading as we can't proceed.
+      } else if (!isAuthenticated) {
+        // This should ideally be handled by ProtectedRoute redirecting to /signin.
+        // If somehow this page is rendered for an unauth user, show error.
         setError("Please log in to view your feed.");
-        setIsLoading(false);
+        setPageIsLoading(false); // Stop page loading.
+      }
     }
-    // If isLoading (from useAuth) is true, we wait for session to resolve.
-  }, [isAuthenticated, agent, isLoading]); // Depend on isLoading from useAuth
+    // If authIsLoading is true, we do nothing here and wait for it to become false.
+    // The page will show its own `pageIsLoading` state or an initial "Setting up..." message.
+  }, [isAuthenticated, agent, authIsLoading]); // Depends on auth state
 
   const fetchPosts = useCallback(async (loadMore = false) => {
     if (!agent || !feedUri || !isAuthenticated) {
-      // This condition might be redundant if ProtectedRoute works, but good for safety.
-      if (!isAuthenticated) setError("Please log in to view feeds.");
-      if (!feedUri && isAuthenticated) setError("Feed URI not set."); // Should be set by useEffect
+      // Update error or loading state appropriately if this condition is met,
+      // though it should ideally be prevented by upstream logic or UI states.
+      if (isAuthenticated && !feedUri && !authIsLoading) { // Check authIsLoading here too
+         // If authenticated and feedUri is still null after auth has loaded, it's an issue.
+        setError("Feed URI is not available. Cannot load posts.");
+      }
+      setPageIsLoading(false); // Ensure page loading stops if we can't fetch.
       return;
     }
 
     if (!loadMore) {
-      setIsLoading(true);
-      // Only clear posts if not loading more and feedUri is definitively set.
-      // This avoids clearing posts if feedUri is temporarily null during init.
-      if(feedUri) setPosts([]);
+      setPageIsLoading(true);
+      setPosts([]);
     } else {
       setIsLoadingMore(true);
     }
@@ -122,21 +132,23 @@ const HomePage: React.FC = () => {
       console.error("Error fetching home feed:", err);
       setError(err instanceof Error ? err.message : "Unknown error fetching feed.");
     } finally {
-      if (!loadMore) setIsLoading(false); else setIsLoadingMore(false);
+      if (!loadMore) setPageIsLoading(false); else setIsLoadingMore(false);
     }
-  }, [agent, feedUri, cursor, isAuthenticated]);
+  }, [agent, feedUri, cursor, isAuthenticated, authIsLoading]); // Added authIsLoading to deps
 
   useEffect(() => {
-    // Fetch posts only if we have a feedUri, agent, and user is authenticated.
-    // This will trigger once feedUri is set from the first useEffect.
-    if (feedUri && agent && isAuthenticated) {
+    // This effect triggers fetching posts once feedUri is set and auth is confirmed.
+    // It should only run if feedUri is valid and other conditions are met.
+    if (feedUri && agent && isAuthenticated && !authIsLoading) { // Ensure auth is not loading
       fetchPosts();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedUri, agent, isAuthenticated]); // Removed fetchPosts from deps to avoid re-triggering on its own change
+    // Not including fetchPosts in deps: it's stable due to useCallback,
+    // and we want this effect triggered by changes in its own dependencies.
+  }, [feedUri, agent, isAuthenticated, authIsLoading, fetchPosts]); // Added fetchPosts to deps as per lint suggestion
 
+  // ... (renderRichText, renderEmbed, renderPost components remain the same) ...
   const renderRichText = (text: string, facets?: AppBskyRichtextFacet.Main[]) => {
-    if (!facets) facets = []; // Ensure facets is an array
+    if (!facets) facets = [];
     const segments = processFacets(text, facets);
     return segments.map((segment, index) => {
       if (segment.type === 'link') {
@@ -199,24 +211,53 @@ const HomePage: React.FC = () => {
       </div>
     );
   };
+  // End Render Components
+
+  // Renamed `isLoading` from useAuth to `authIsLoading` to avoid conflict.
+  // `pageIsLoading` is the loading state for this page's data.
+  if (authIsLoading) {
+    // Show a generic loading screen while auth state is being determined.
+    // AppLayout might not be appropriate here if it depends on auth state itself.
+    return (
+      <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center">
+        <p>Loading session...</p>
+      </div>
+    );
+  }
 
   return (
     <AppLayout currentPage="Home" showHeader={true} showSidebarButton={true}>
       <div className="text-white">
-        {/* Removed the specific feed URI display, as this is the default home feed */}
-        {/* <div className="p-4 sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-gray-700"><h1 className="text-lg font-semibold">Home Feed</h1></div> */}
-
-        {(isLoading && posts.length === 0 && feedUri) && <div className="p-4 text-center">Loading your feed...</div>}
+        {/* Conditional rendering based on pageIsLoading (for feed data) and error state */}
+        {pageIsLoading && !error && <div className="p-4 text-center">Loading your feed...</div>}
         {error && <div className="p-4 text-red-400 text-center">Error: {error}</div>}
-        {posts.length === 0 && !isLoading && !error && feedUri && (<div className="p-4 text-center text-gray-400">Your feed is empty. Go explore and follow some accounts!</div>)}
-        {!feedUri && !isLoading && !error && isAuthenticated && (<div className="p-4 text-center text-gray-400">Setting up your feed...</div>)}
-        {!isAuthenticated && !isLoading && (<div className="p-4 text-center text-gray-400">Please sign in to see your feed.</div>)}
 
-        <div className="divide-y divide-gray-700/50">{posts.map(item => renderPost(item))}</div>
+        {!pageIsLoading && !error && posts.length === 0 && feedUri && (
+          <div className="p-4 text-center text-gray-400">Your feed is empty. Go explore and follow some accounts!</div>
+        )}
+        {!pageIsLoading && !error && !feedUri && isAuthenticated && ( // If authenticated but feedUri couldn't be set (e.g. no DID)
+          <div className="p-4 text-center text-gray-400">Could not determine your feed. Please try again later.</div>
+        )}
+        {/* Message for unauthenticated should ideally not be seen due to ProtectedRoute */}
+        {!pageIsLoading && !error && !isAuthenticated && (
+           <div className="p-4 text-center text-gray-400">Please sign in to see your feed.</div>
+        )}
 
-        {cursor && !isLoadingMore && posts.length > 0 && (<div className="p-4 flex justify-center"><button onClick={() => fetchPosts(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white font-semibold">Load More</button></div>)}
+        <div className="divide-y divide-gray-700/50">
+          {!pageIsLoading && !error && posts.map(item => renderPost(item))}
+        </div>
+
+        {cursor && !isLoadingMore && posts.length > 0 && !pageIsLoading && !error && (
+          <div className="p-4 flex justify-center">
+            <button onClick={() => fetchPosts(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white font-semibold">
+              Load More
+            </button>
+          </div>
+        )}
         {isLoadingMore && <div className="p-4 text-center">Loading more posts...</div>}
-        {!cursor && posts.length > 0 && !isLoadingMore && (<div className="p-4 text-center text-gray-500">End of feed.</div>)}
+        {!cursor && posts.length > 0 && !isLoadingMore && !pageIsLoading && !error && (
+          <div className="p-4 text-center text-gray-500">End of feed.</div>
+        )}
       </div>
     </AppLayout>
   );

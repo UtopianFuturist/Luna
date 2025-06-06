@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BskyAgent } from '@atproto/api';
-import { parseSubject, SubjectType, isValidSubject, formatSubjectForDisplay } from './subjectResolver';
+import { parseSubject, SubjectType, isValidSubject, formatSubjectForDisplay } from './subjectResolver'; // Assuming subjectResolver.ts is at the root
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -33,136 +33,153 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Default to true
   const [agent, setAgent] = useState<BskyAgent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize and check for existing session
   useEffect(() => {
     const initSession = async () => {
+      setIsLoading(true); // Ensure loading is true at the start of the process
       try {
-        // Check if we have a stored session
         const storedSession = localStorage.getItem('blueshapes_session');
         
         if (storedSession) {
           const sessionData = JSON.parse(storedSession);
-          
-          // Create a new agent
-          const newAgent = new BskyAgent({
-            service: 'https://bsky.social',
-          });
-          
-          // Resume the session
-          await newAgent.resumeSession({
-            did: sessionData.did,
-            handle: sessionData.handle,
-            accessJwt: sessionData.accessJwt,
-            refreshJwt: sessionData.refreshJwt,
-          });
-          
-          setAgent(newAgent);
-          setIsAuthenticated(true);
-          console.log('Successfully restored existing session');
+
+          // Add detailed checks for essential session data properties
+          if (
+            sessionData &&
+            typeof sessionData.did === 'string' && sessionData.did.trim() !== '' &&
+            typeof sessionData.handle === 'string' && sessionData.handle.trim() !== '' &&
+            typeof sessionData.accessJwt === 'string' && sessionData.accessJwt.trim() !== '' &&
+            typeof sessionData.refreshJwt === 'string' && sessionData.refreshJwt.trim() !== ''
+          ) {
+            const newAgent = new BskyAgent({
+              service: 'https://bsky.social',
+            });
+
+            await newAgent.resumeSession({
+              did: sessionData.did,
+              handle: sessionData.handle,
+              accessJwt: sessionData.accessJwt,
+              refreshJwt: sessionData.refreshJwt,
+            });
+
+            // Verify agent.session is populated after resume
+            if (newAgent.session?.did) {
+              setAgent(newAgent);
+              setIsAuthenticated(true);
+              setError(null);
+              console.log('Successfully restored existing session for DID:', newAgent.session.did);
+            } else {
+              // resumeSession didn't populate agent.session as expected
+              console.error('Failed to restore session: agent.session not populated after resumeSession.');
+              localStorage.removeItem('blueshapes_session');
+              setIsAuthenticated(false);
+              setAgent(null);
+              setError('Failed to restore session data. Please log in again.');
+            }
+          } else {
+            // Essential data missing from stored session
+            console.error('Failed to restore session: essential data missing from localStorage.', sessionData);
+            localStorage.removeItem('blueshapes_session');
+            setIsAuthenticated(false);
+            setAgent(null);
+            // setError('Invalid session data found. Please log in again.'); // Optional: set error for user
+          }
+        } else {
+          // No stored session
+          setIsAuthenticated(false);
+          setAgent(null);
         }
       } catch (err) {
-        console.error('Failed to restore session:', err);
-        // Clear any invalid session data
+        console.error('Failed to restore session (exception):', err);
         localStorage.removeItem('blueshapes_session');
+        setIsAuthenticated(false);
+        setAgent(null);
+        setError('Failed to restore session due to an error. Please log in again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     initSession();
-  }, []);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const emailLinkLogin = async (identifier: string, password: string, authToken?: string): Promise<{
     success: boolean;
     needsEmailToken: boolean;
     error?: string;
   }> => {
+    setIsLoading(true);
     setError(null);
 
     try {
-      // Validate the identifier (handle or DID)
       if (!isValidSubject(identifier)) {
         throw new Error('Invalid BlueSky handle or DID format');
       }
 
-      console.log(`Attempting login for ${identifier}${authToken ? ' with auth token' : ''}`);
-
-      // Create a new agent
       const newAgent = new BskyAgent({
         service: 'https://bsky.social',
       });
 
       try {
-        // Login with the provided credentials
         const result = await newAgent.login({
           identifier,
           password,
           ...(authToken ? { authFactorToken: authToken } : {}),
         });
 
-        // Store the session data
-        localStorage.setItem('blueshapes_session', JSON.stringify({
-          did: result.data.did,
-          handle: result.data.handle,
-          accessJwt: result.data.accessJwt,
-          refreshJwt: result.data.refreshJwt,
-        }));
-
-        setAgent(newAgent);
-        setIsAuthenticated(true);
-        console.log('Successfully logged in');
-        
-        return {
-          success: true,
-          needsEmailToken: false
-        };
+        // Ensure all necessary data is present before storing
+        if (result.data.did && result.data.handle && result.data.accessJwt && result.data.refreshJwt) {
+            localStorage.setItem('blueshapes_session', JSON.stringify({
+            did: result.data.did,
+            handle: result.data.handle,
+            accessJwt: result.data.accessJwt,
+            refreshJwt: result.data.refreshJwt,
+            }));
+            setAgent(newAgent); // agent.session should be populated by BskyAgent after login
+            setIsAuthenticated(true);
+            console.log('Successfully logged in');
+            setIsLoading(false);
+            return {
+                success: true,
+                needsEmailToken: false
+            };
+        } else {
+            // Login succeeded but response data is incomplete
+            console.error('Login error: Incomplete session data from server.', result.data);
+            setError('Login succeeded but received incomplete session data.');
+            setIsLoading(false);
+            return {
+                success: false,
+                needsEmailToken: false,
+                error: 'Login succeeded but received incomplete session data.'
+            };
+        }
       } catch (err: any) {
-        console.log('Login error:', err);
-        
-        // Check if this is an auth factor token required error
-        // This is the critical part that needs to be fixed
+        console.log('Login error from agent.login:', err);
         if (
           err.error === 'AuthFactorTokenRequired' || 
           (err.message && err.message.includes('auth factor token')) ||
           (err.status === 401 && err.error === 'InvalidToken') ||
           (err.status === 401 && err.message && err.message.includes('token'))
         ) {
-          console.log('Email auth token required - 2FA needed');
+          setIsLoading(false);
           return {
             success: false,
             needsEmailToken: true,
             error: 'A confirmation code has been sent to your email. Please enter it to continue.'
           };
         }
-        
-        // Handle other errors
         throw err;
       }
     } catch (err: any) {
-      console.error('Failed to login:', err);
-      
-      // Additional check for 2FA errors that might be missed
-      if (
-        err.error === 'AuthFactorTokenRequired' || 
-        (err.message && err.message.includes('auth factor token')) ||
-        (err.status === 401 && err.error === 'InvalidToken') ||
-        (err.status === 401 && err.message && err.message.includes('token'))
-      ) {
-        console.log('Caught 2FA requirement in catch block');
-        return {
-          success: false,
-          needsEmailToken: true,
-          error: 'A confirmation code has been sent to your email. Please enter it to continue.'
-        };
-      }
-      
+      console.error('Failed to login (outer catch):', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to authenticate';
       setError(errorMessage);
-      
+      setIsLoading(false);
       return {
         success: false,
         needsEmailToken: false,
@@ -173,12 +190,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     setIsLoading(true);
-    
+    setError(null);
     try {
-      // Clear the stored session
       localStorage.removeItem('blueshapes_session');
-      
-      // Reset the agent
       setAgent(null);
       setIsAuthenticated(false);
       console.log('Successfully signed out');
