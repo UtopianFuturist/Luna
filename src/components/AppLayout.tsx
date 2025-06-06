@@ -34,6 +34,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const [isLoadingFeeds, setIsLoadingFeeds] = useState<boolean>(false);
   const [feedError, setFeedError] = useState<string | null>(null);
 
+  // State for top nav visibility
+  const [isFeedsNavVisible, setIsFeedsNavVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
   useEffect(() => {
     const fetchUserFeeds = async () => {
       if (!isAuthenticated || !agent) {
@@ -72,6 +76,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
     fetchUserFeeds();
   }, [agent, isAuthenticated]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 50) { // Added a threshold of 50px to avoid hiding on small scrolls
+        // Scrolling down
+        setIsFeedsNavVisible(false);
+      } else {
+        // Scrolling up
+        setIsFeedsNavVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
 
   if (!browserAudioCtx) {
@@ -117,7 +140,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           </header>
           {/* New Top Navigation Bar for Feeds */}
           {/* This bar is sticky below the main header. Adjust top-14 if main header height changes. */}
-          <nav className="sticky top-14 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700 px-3 py-2 flex items-center justify-between h-12">
+          <nav className={`sticky top-14 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700 px-3 py-2 flex items-center justify-between h-12 transition-transform duration-300 ease-in-out ${isFeedsNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
             {/* Left: Sidebar Toggle */}
             {showSidebarButton && (
               <button className="p-2 rounded-full hover:bg-gray-700">
@@ -168,25 +191,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       {!hideTabBar && (
         <nav className="sticky bottom-0 z-40 bg-black border-t border-gray-800"> {/* Ensure this nav is z-40 if new top nav is z-30 */}
           <div className="flex justify-around py-2">
-            <Link href="/" className={`p-2 rounded-full ${pathname === '/' ? 'text-blue-500' : 'text-gray-500'}`}> {/* Changed currentPage to pathname for home */}
+            <Link href="/" className={`p-2 rounded-full ${pathname === '/' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Home size={24} />
             </Link>
-            <Link href="/explore" className={`p-2 rounded-full ${pathname.startsWith('/explore') ? 'text-blue-500' : 'text-gray-500'}`}> {/* Used startsWith for explore */}
+            <Link href="/explore" className={`p-2 rounded-full ${pathname.startsWith('/explore') ? 'text-blue-500' : 'text-gray-500'}`}>
               <Search size={24} />
             </Link>
             <Link href="/browser" className={`flex flex-col items-center p-2 rounded-full ${pathname === '/browser' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Globe size={24} />
               <span className="text-xs">Browser</span>
             </Link>
-            <Link href="/chat" className={`p-2 rounded-full ${pathname.startsWith('/chat') ? 'text-blue-500' : 'text-gray-500'}`}> {/* Used startsWith for chat */}
+            <Link href="/chat" className={`p-2 rounded-full ${pathname.startsWith('/chat') ? 'text-blue-500' : 'text-gray-500'}`}>
               <MessageCircle size={24} />
             </Link>
             <Link href="/notifications" className={`p-2 rounded-full ${pathname === '/notifications' ? 'text-blue-500' : 'text-gray-500'}`}>
               <Bell size={24} />
-            </Link>
-             {/* Changed Settings link to point to BlueSky Settings */}
-            <Link href="/bsky-settings" className={`p-2 rounded-full ${pathname.startsWith('/bsky-settings') ? 'text-blue-500' : 'text-gray-500'}`}>
-              <Settings size={24} />
             </Link>
             <Link href="/profile" className={`p-2 rounded-full ${pathname === '/profile' ? 'text-blue-500' : 'text-gray-500'}`}>
               <User size={24} />
