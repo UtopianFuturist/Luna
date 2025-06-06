@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { colors } from '../../utils/colors';
+import { colors } from './colors';
 
 interface TwoFactorScreenProps {
   onBackClick: () => void;
