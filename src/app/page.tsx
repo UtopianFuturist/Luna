@@ -99,19 +99,14 @@ const HomePage: React.FC = () => {
         setPageIsLoading(false); // Stop page loading.
       }
     }
-    // If authIsLoading is true, we do nothing here and wait for it to become false.
-    // The page will show its own `pageIsLoading` state or an initial "Setting up..." message.
   }, [isAuthenticated, agent, authIsLoading]); // Depends on auth state
 
   const fetchPosts = useCallback(async (loadMore = false) => {
     if (!agent || !feedUri || !isAuthenticated) {
-      // Update error or loading state appropriately if this condition is met,
-      // though it should ideally be prevented by upstream logic or UI states.
-      if (isAuthenticated && !feedUri && !authIsLoading) { // Check authIsLoading here too
-         // If authenticated and feedUri is still null after auth has loaded, it's an issue.
+      if (isAuthenticated && !feedUri && !authIsLoading) {
         setError("Feed URI is not available. Cannot load posts.");
       }
-      setPageIsLoading(false); // Ensure page loading stops if we can't fetch.
+      setPageIsLoading(false);
       return;
     }
 
@@ -134,19 +129,14 @@ const HomePage: React.FC = () => {
     } finally {
       if (!loadMore) setPageIsLoading(false); else setIsLoadingMore(false);
     }
-  }, [agent, feedUri, cursor, isAuthenticated, authIsLoading]); // Added authIsLoading to deps
+  }, [agent, feedUri, cursor, isAuthenticated, authIsLoading]);
 
   useEffect(() => {
-    // This effect triggers fetching posts once feedUri is set and auth is confirmed.
-    // It should only run if feedUri is valid and other conditions are met.
-    if (feedUri && agent && isAuthenticated && !authIsLoading) { // Ensure auth is not loading
+    if (feedUri && agent && isAuthenticated && !authIsLoading) {
       fetchPosts();
     }
-    // Not including fetchPosts in deps: it's stable due to useCallback,
-    // and we want this effect triggered by changes in its own dependencies.
-  }, [feedUri, agent, isAuthenticated, authIsLoading, fetchPosts]); // Added fetchPosts to deps as per lint suggestion
+  }, [feedUri, agent, isAuthenticated, authIsLoading, fetchPosts]);
 
-  // ... (renderRichText, renderEmbed, renderPost components remain the same) ...
   const renderRichText = (text: string, facets?: AppBskyRichtextFacet.Main[]) => {
     if (!facets) facets = [];
     const segments = processFacets(text, facets);
@@ -211,13 +201,8 @@ const HomePage: React.FC = () => {
       </div>
     );
   };
-  // End Render Components
 
-  // Renamed `isLoading` from useAuth to `authIsLoading` to avoid conflict.
-  // `pageIsLoading` is the loading state for this page's data.
   if (authIsLoading) {
-    // Show a generic loading screen while auth state is being determined.
-    // AppLayout might not be appropriate here if it depends on auth state itself.
     return (
       <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center">
         <p>Loading session...</p>
@@ -228,17 +213,15 @@ const HomePage: React.FC = () => {
   return (
     <AppLayout currentPage="Home" showHeader={true} showSidebarButton={true}>
       <div className="text-white">
-        {/* Conditional rendering based on pageIsLoading (for feed data) and error state */}
         {pageIsLoading && !error && <div className="p-4 text-center">Loading your feed...</div>}
-        {error && <div className="p-4 text-red-400 text-center">Error: {error}</div>}
+        {error && <div className="p-4 text-center text-red-300 bg-red-900/40 border border-red-700 rounded-lg">Error: {error}</div>}
 
         {!pageIsLoading && !error && posts.length === 0 && feedUri && (
           <div className="p-4 text-center text-gray-400">Your feed is empty. Go explore and follow some accounts!</div>
         )}
-        {!pageIsLoading && !error && !feedUri && isAuthenticated && ( // If authenticated but feedUri couldn't be set (e.g. no DID)
+        {!pageIsLoading && !error && !feedUri && isAuthenticated && (
           <div className="p-4 text-center text-gray-400">Could not determine your feed. Please try again later.</div>
         )}
-        {/* Message for unauthenticated should ideally not be seen due to ProtectedRoute */}
         {!pageIsLoading && !error && !isAuthenticated && (
            <div className="p-4 text-center text-gray-400">Please sign in to see your feed.</div>
         )}
