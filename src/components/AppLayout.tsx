@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { BrowserAudioContext } from '../contexts/BrowserAudioContext';
 import UserMenu from './UserMenu';
+import Sidebar from '../../Sidebar';
 import { getPreferences, getFeedGenerators } from '@/lib/bskyService'; // Service imports
 import type { AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // Type imports
 
@@ -25,6 +26,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   showSidebarButton = false,
 }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { agent, isAuthenticated, session } = useAuth(); // Added agent
   const browserAudioCtx = useContext(BrowserAudioContext);
@@ -143,7 +145,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <nav className={`sticky top-14 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700 px-3 py-2 flex items-center justify-between h-12 transition-transform duration-300 ease-in-out ${isFeedsNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
             {/* Left: Sidebar Toggle */}
             {showSidebarButton && (
-              <button className="p-2 rounded-full hover:bg-gray-700">
+              <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-full hover:bg-gray-700">
                 <Menu size={20} />
               </button>
             )}
