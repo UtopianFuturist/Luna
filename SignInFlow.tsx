@@ -1,3 +1,5 @@
+// Fixed version of SignInFlow.tsx
+
 "use client";
 
 import React, { useState } from 'react';
@@ -36,37 +38,37 @@ const SignInFlow: React.FC = () => {
   };
 
   const handleCredentialsNext = async (identifier: string, password: string) => {
-    alert("handleCredentialsNext in SignInFlow entered");
+    // Store credentials for potential 2FA step
     setIdentifier(identifier);
     setPassword(password);
-    setError(null); // Clear previous SignInFlow error before new attempt
+    setError(null); // Clear previous errors
 
     try {
-      alert("Before calling emailLinkLogin");
+      // Call the authentication function from AuthContext
       const result = await emailLinkLogin(identifier, password);
-      alert("After calling emailLinkLogin. Result: " + JSON.stringify(result, null, 2));
       
-      // More robust check for result and its properties
+      // Handle the result based on its structure and values
       if (result && typeof result.success === 'boolean') {
         if (result.success) {
+          // If login is successful, redirect to home page
           router.push('/');
         } else if (result.needsEmailToken) {
+          // If 2FA is required, move to the TwoFactorScreen
           setCurrentStep(SignInStep.TWO_FACTOR);
         } else {
-          // Handles cases like { success: false, error: '...' }
-          console.log("SignInFlow: Login attempt failed:", result.error); // Log the specific error
-          setError("Result from emailLinkLogin (known error): " + JSON.stringify(result, null, 2));
+          // If login failed for other reasons, display the error
+          console.log("SignInFlow: Login attempt failed:", result.error);
+          setError(result.error || "Login failed. Please check your credentials.");
         }
       } else {
-        // This case handles if result is undefined, null, or not the expected shape
+        // Handle unexpected result structure
         console.error("SignInFlow: emailLinkLogin returned invalid result structure:", result);
-        setError("Invalid result structure from emailLinkLogin: " + JSON.stringify(result, null, 2));
+        setError("An unexpected error occurred. Please try again.");
       }
     } catch (err) {
-      alert("Error caught in handleCredentialsNext. Error: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-      // This catches errors thrown by emailLinkLogin OR if result was null/undefined and caused a TypeError
+      // Handle any exceptions thrown during the login process
       console.error("SignInFlow: Critical error during handleCredentialsNext:", err);
-      setError("Caught error in handleCredentialsNext: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     }
   };
 
@@ -75,25 +77,30 @@ const SignInFlow: React.FC = () => {
   };
 
   const handleTwoFactorNext = async (code: string) => {
-    setError(null); // Clear previous SignInFlow error
+    setError(null); // Clear previous errors
 
     try {
-      const result = await emailLinkLogin(identifier, password, code); // password should be available from state
+      // Call the authentication function with the 2FA code
+      const result = await emailLinkLogin(identifier, password, code);
       
       if (result && typeof result.success === 'boolean') {
         if (result.success) {
+          // If 2FA verification is successful, redirect to home page
           router.push('/');
         } else {
+          // If 2FA verification failed, display the error
           console.log("SignInFlow: 2FA attempt failed:", result.error);
           setError(result.error || 'Invalid confirmation code. Please try again.');
         }
       } else {
+        // Handle unexpected result structure
         console.error("SignInFlow: emailLinkLogin (2FA) returned invalid result structure:", result);
-        setError('An unexpected error occurred during 2FA. Response was invalid.');
+        setError('An unexpected error occurred. Please try again.');
       }
     } catch (err) {
+      // Handle any exceptions thrown during the 2FA process
       console.error("SignInFlow: Critical error during handleTwoFactorNext:", err);
-      setError(err instanceof Error ? err.message : 'An critical unexpected error occurred during the 2FA process.');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
     }
   };
 

@@ -1,3 +1,5 @@
+// Fixed version of AuthContext.tsx
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -112,16 +114,124 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     needsEmailToken: boolean;
     error?: string;
   }> => {
-    alert("AuthContext DEBUG: emailLinkLogin entered.");
-    alert("AuthContext DEBUG: Identifier received: [" + identifier + "]");
-    alert("AuthContext DEBUG: Password received: [" + password + "]");
+    setError(null);
+    setIsLoading(true);
+    
+    try {
+      const newAgent = new BskyAgent({
+        service: 'https://bsky.social',
+      });
 
-    // IMMEDIATELY return a dummy 2FA response for testing the flow
-    return {
-      success: false,
-      needsEmailToken: true,
-      error: "DEBUG: Forced 2FA step"
-    };
+      // For BlueSky, we need to check if this is a 2FA flow or initial login
+      if (authToken) {
+        // This is the 2FA confirmation step
+        // Note: This is a simplified example. The actual implementation will depend on 
+        // how BlueSky handles 2FA. You may need to use a different API endpoint.
+        try {
+          // This is a placeholder. Replace with actual BlueSky 2FA confirmation API
+          const confirmResult = await fetch('https://bsky.social/xrpc/com.atproto.server.confirmEmail', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: identifier,
+              token: authToken,
+            }),
+          });
+          
+          const confirmData = await confirmResult.json();
+          
+          if (confirmResult.ok) {
+            // Now try to login again with the confirmed credentials
+            const loginRes = await newAgent.login({
+              identifier,
+              password,
+            });
+            
+            if (loginRes.success) {
+              localStorage.setItem('blueshapes_session', JSON.stringify(newAgent.session));
+              setAgent(newAgent);
+              setIsAuthenticated(true);
+              return { success: true, needsEmailToken: false };
+            } else {
+              return { 
+                success: false, 
+                needsEmailToken: false, 
+                error: loginRes.error || 'Login failed after 2FA confirmation.' 
+              };
+            }
+          } else {
+            return { 
+              success: false, 
+              needsEmailToken: false, 
+              error: confirmData.error || 'Failed to confirm 2FA code.' 
+            };
+          }
+        } catch (err: any) {
+          console.error('2FA confirmation error:', err);
+          return { 
+            success: false, 
+            needsEmailToken: false, 
+            error: err.message || 'An error occurred during 2FA confirmation.' 
+          };
+        }
+      } else {
+        // Initial login attempt
+        try {
+          const loginRes = await newAgent.login({
+            identifier,
+            password,
+          });
+          
+          if (loginRes.success) {
+            localStorage.setItem('blueshapes_session', JSON.stringify(newAgent.session));
+            setAgent(newAgent);
+            setIsAuthenticated(true);
+            return { success: true, needsEmailToken: false };
+          } else {
+            // Check if the error indicates 2FA is required
+            // Note: You'll need to check the actual error message/code that BlueSky returns
+            if (loginRes.error && 
+                (loginRes.error.includes('2fa') || 
+                 loginRes.error.includes('two-factor') || 
+                 loginRes.error.includes('verification'))) {
+              return { success: false, needsEmailToken: true, error: loginRes.error };
+            } else {
+              setError(loginRes.error || 'Login failed. Please check your credentials.');
+              return { success: false, needsEmailToken: false, error: loginRes.error };
+            }
+          }
+        } catch (err: any) {
+          console.error('Login error:', err);
+          
+          // Check if the error message indicates 2FA is required
+          if (err.message && 
+              (err.message.includes('2fa') || 
+               err.message.includes('two-factor') || 
+               err.message.includes('verification'))) {
+            return { success: false, needsEmailToken: true, error: err.message };
+          } else {
+            setError(err.message || 'An unexpected error occurred during login.');
+            return { 
+              success: false, 
+              needsEmailToken: false, 
+              error: err.message || 'An unexpected error occurred during login.' 
+            };
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('AuthContext: Critical login error:', err);
+      setError(err.message || 'A critical error occurred during the login process.');
+      return { 
+        success: false, 
+        needsEmailToken: false, 
+        error: err.message || 'A critical error occurred during the login process.' 
+      };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signOut = async () => {
@@ -155,3 +265,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
