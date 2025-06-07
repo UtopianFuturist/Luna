@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { colors } from './colors';
+import { colors } from '../../utils/colors';
 
 interface WelcomeScreenProps {
   onSignInClick: () => void;
@@ -20,7 +20,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* Logo */}
         <div className="mb-4 relative w-32 h-32">
           <Image 
-            src="/OmniSky_Logo.jpeg"
+            src="/OmniSky_Logo.jpeg" 
             alt="OmniSky Logo" 
             fill
             style={{ objectFit: 'contain' }}
