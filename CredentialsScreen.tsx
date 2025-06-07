@@ -17,6 +17,7 @@ const CredentialsScreen: React.FC<CredentialsScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => { // Make it async
+    alert("handleSubmit in CredentialsScreen called");
     e.preventDefault();
     setIsLoading(true); // Disable button immediately
     try {

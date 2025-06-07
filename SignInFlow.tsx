@@ -52,17 +52,17 @@ const SignInFlow: React.FC = () => {
         } else {
           // Handles cases like { success: false, error: '...' }
           console.log("SignInFlow: Login attempt failed:", result.error); // Log the specific error
-          setError(result.error || 'Login failed. Please check your credentials.');
+          setError("Result from emailLinkLogin (known error): " + JSON.stringify(result, null, 2));
         }
       } else {
         // This case handles if result is undefined, null, or not the expected shape
         console.error("SignInFlow: emailLinkLogin returned invalid result structure:", result);
-        setError('An unexpected error occurred. Login response was invalid.');
+        setError("Invalid result structure from emailLinkLogin: " + JSON.stringify(result, null, 2));
       }
     } catch (err) {
       // This catches errors thrown by emailLinkLogin OR if result was null/undefined and caused a TypeError
       console.error("SignInFlow: Critical error during handleCredentialsNext:", err);
-      setError(err instanceof Error ? err.message : 'An critical unexpected error occurred during the login process.');
+      setError("Caught error in handleCredentialsNext: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
     }
   };
 
