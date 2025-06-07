@@ -36,6 +36,7 @@ const SignInFlow: React.FC = () => {
   };
 
   const handleCredentialsNext = async (identifier: string, password: string) => {
+    alert("handleCredentialsNext in SignInFlow entered");
     setIdentifier(identifier);
     setPassword(password);
     setError(null); // Clear previous SignInFlow error before new attempt
