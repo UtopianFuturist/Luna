@@ -125,6 +125,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       try {
+        alert("AuthContext: Identifier being sent: [" + identifier + "]");
+        alert("AuthContext: Password being sent: [" + password + "]");
         const result = await newAgent.login({
           identifier,
           password,
