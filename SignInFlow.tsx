@@ -42,7 +42,9 @@ const SignInFlow: React.FC = () => {
     setError(null); // Clear previous SignInFlow error before new attempt
 
     try {
+      alert("Before calling emailLinkLogin");
       const result = await emailLinkLogin(identifier, password);
+      alert("After calling emailLinkLogin. Result: " + JSON.stringify(result, null, 2));
       
       // More robust check for result and its properties
       if (result && typeof result.success === 'boolean') {
@@ -61,6 +63,7 @@ const SignInFlow: React.FC = () => {
         setError("Invalid result structure from emailLinkLogin: " + JSON.stringify(result, null, 2));
       }
     } catch (err) {
+      alert("Error caught in handleCredentialsNext. Error: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
       // This catches errors thrown by emailLinkLogin OR if result was null/undefined and caused a TypeError
       console.error("SignInFlow: Critical error during handleCredentialsNext:", err);
       setError("Caught error in handleCredentialsNext: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
