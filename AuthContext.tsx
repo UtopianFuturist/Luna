@@ -112,86 +112,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     needsEmailToken: boolean;
     error?: string;
   }> => {
-    setIsLoading(true);
-    setError(null);
+    alert("AuthContext DEBUG: emailLinkLogin entered.");
+    alert("AuthContext DEBUG: Identifier received: [" + identifier + "]");
+    alert("AuthContext DEBUG: Password received: [" + password + "]");
 
-    try {
-      /*
-      if (!isValidSubject(identifier)) {
-        throw new Error('Invalid BlueSky handle or DID format');
-      }
-      */
-
-      const newAgent = new BskyAgent({
-        service: 'https://bsky.social',
-      });
-
-      try {
-        alert("AuthContext: Identifier being sent: [" + identifier + "]");
-        alert("AuthContext: Password being sent: [" + password + "]");
-        const result = await newAgent.login({
-          identifier,
-          password,
-          ...(authToken ? { authFactorToken: authToken } : {}),
-        });
-
-        // Ensure all necessary data is present before storing
-        if (result.data.did && result.data.handle && result.data.accessJwt && result.data.refreshJwt) {
-            localStorage.setItem('blueshapes_session', JSON.stringify({
-            did: result.data.did,
-            handle: result.data.handle,
-            accessJwt: result.data.accessJwt,
-            refreshJwt: result.data.refreshJwt,
-            }));
-            setAgent(newAgent); // agent.session should be populated by BskyAgent after login
-            setIsAuthenticated(true);
-            console.log('Successfully logged in');
-            setIsLoading(false);
-            return {
-                success: true,
-                needsEmailToken: false
-            };
-        } else {
-            // Login succeeded but response data is incomplete
-            console.error('Login error: Incomplete session data from server.', result.data);
-            setError('Login succeeded but received incomplete session data.');
-            setIsLoading(false);
-            return {
-                success: false,
-                needsEmailToken: false,
-                error: 'Login succeeded but received incomplete session data.'
-            };
-        }
-      } catch (err: any) {
-        console.error('Detailed error from agent.login:', JSON.stringify(err, null, 2));
-        console.log('Login error from agent.login:', err);
-        if (
-          err.error === 'AuthFactorTokenRequired' || // Exact error code
-          (err.message && err.message.toLowerCase().includes('authentication factor required')) || // More general message check
-          (err.message && err.message.toLowerCase().includes('2fa required')) || // Another common message
-          (err.name && err.name.toLowerCase().includes('authfactor')) // Check error name if available
-        ) {
-          setIsLoading(false);
-          return {
-            success: false,
-            needsEmailToken: true,
-            error: 'A confirmation code has been sent to your email. Please enter it to continue.'
-          };
-        }
-        throw err;
-      }
-    } catch (err: any) {
-      alert("AuthContext: Outer catch block entered. Error: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-      console.error('Failed to login (outer catch):', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to authenticate';
-      setError(errorMessage);
-      setIsLoading(false);
-      return {
-        success: false,
-        needsEmailToken: false,
-        error: errorMessage
-      };
-    }
+    // IMMEDIATELY return a dummy 2FA response for testing the flow
+    return {
+      success: false,
+      needsEmailToken: true,
+      error: "DEBUG: Forced 2FA step"
+    };
   };
 
   const signOut = async () => {
