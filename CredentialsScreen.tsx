@@ -16,10 +16,20 @@ const CredentialsScreen: React.FC<CredentialsScreenProps> = ({
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => { // Make it async
     e.preventDefault();
-    setIsLoading(true);
-    onNextClick(identifier, password);
+    setIsLoading(true); // Disable button immediately
+    try {
+      await onNextClick(identifier, password); // Call and await the async operation
+    } catch (error) {
+      // This catch block is for errors thrown directly by onNextClick.
+      // (handleCredentialsNext in SignInFlow.tsx currently catches its own errors)
+      console.error("CredentialsScreen: Error during submission:", error);
+    } finally {
+      // This block will execute after the try/catch, ensuring isLoading is reset
+      // if the component is still mounted. This re-enables the button.
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -166,30 +176,6 @@ const CredentialsScreen: React.FC<CredentialsScreenProps> = ({
         </form>
       </div>
       
-      {/* Made with Manus */}
-      <div 
-        className="fixed bottom-20 right-8 bg-gray-800 rounded-full px-4 py-2 flex items-center"
-      >
-        <span className="mr-2">Made with Manus</span>
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="20" 
-          height="20" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
-          <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/>
-          <path d="M8.5 8.5v.01"/>
-          <path d="M16 15.5v.01"/>
-          <path d="M12 12v.01"/>
-          <path d="M11 17v.01"/>
-          <path d="M7 14v.01"/>
-        </svg>
-      </div>
     </div>
   );
 };
