@@ -1,4 +1,4 @@
-# Luna
+# OmniSky
 BlueSky client
 
 ## Deployment

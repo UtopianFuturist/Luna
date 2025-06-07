@@ -129,8 +129,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 className="p-1 rounded-full hover:bg-gray-800"
               >
                 <Image
-                  src="/shapes_logo.jpeg"
-                  alt="Profile"
+                  src="/OmniSky_Logo.jpeg"
+                  alt="OmniSky Logo"
                   width={32}
                   height={32}
                   className="rounded-full"

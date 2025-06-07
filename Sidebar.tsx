@@ -63,13 +63,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between p-4 border-b border-gray-800">
             <div className="flex items-center">
               <Image
-                src="/shapes_logo.jpeg"
-                alt="BlueShapes"
+                src="/OmniSky_Logo.jpeg"
+                alt="OmniSky Logo"
                 width={40}
                 height={40}
                 className="rounded-full"
               />
-              <h1 className="text-xl font-bold ml-3">BlueShapes</h1>
+              <h1 className="text-xl font-bold ml-3">OmniSky</h1>
             </div>
             <button 
               onClick={onClose}

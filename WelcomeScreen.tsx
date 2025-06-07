@@ -20,7 +20,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* Logo */}
         <div className="mb-4 relative w-32 h-32">
           <Image 
-            src="/logo.png" 
+            src="/OmniSky_Logo.jpeg"
             alt="OmniSky Logo" 
             fill
             style={{ objectFit: 'contain' }}

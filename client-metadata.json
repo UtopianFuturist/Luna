@@ -1,9 +1,9 @@
 {
-  "client_id": "https://nsicaeop.manus.space/client-metadata.json",
-  "client_name": "BlueShapes",
-  "client_uri": "https://nsicaeop.manus.space",
-  "logo_uri": "https://nsicaeop.manus.space/shapes_logo.jpeg",
-  "redirect_uris": ["https://nsicaeop.manus.space/callback"],
+  "client_id": "https://omnisky.onrender.com/client-metadata.json",
+  "client_name": "OmniSky",
+  "client_uri": "https://omnisky.onrender.com",
+  "logo_uri": "https://omnisky.onrender.com/OmniSky_Logo.jpeg",
+  "redirect_uris": ["https://omnisky.onrender.com/callback"],
   "scope": "atproto transition:generic",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
@@ -11,7 +11,7 @@
   "application_type": "web",
   "dpop_bound_access_tokens": true,
   "subject_type": "public",
-  "tos_uri": "https://nsicaeop.manus.space/terms",
-  "policy_uri": "https://nsicaeop.manus.space/privacy",
-  "jwks_uri": "https://nsicaeop.manus.space/.well-known/jwks.json"
+  "tos_uri": "https://omnisky.onrender.com/terms",
+  "policy_uri": "https://omnisky.onrender.com/privacy",
+  "jwks_uri": "https://omnisky.onrender.com/.well-known/jwks.json"
 }

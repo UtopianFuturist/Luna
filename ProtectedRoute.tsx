@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/AuthContext'; // Adjusted path assuming AuthContext is at root src
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -14,23 +14,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  React.useEffect(() => {
-    // Skip redirect for signin and callback pages
-    const isAuthPage = pathname === '/signin' || pathname === '/callback' || pathname === '/create-account';
-    
-    if (!isLoading) {
-      if (!isAuthenticated && !isAuthPage) {
-        // Redirect to signin if not authenticated and not on an auth page
-        router.push('/signin');
-      } else if (isAuthenticated && isAuthPage) {
-        // Redirect to home if authenticated and on an auth page
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  const isAuthPage = pathname === '/signin' || pathname === '/callback' || pathname === '/create-account';
 
-  // Show loading spinner while checking authentication
-  if (isLoading) {
+  // Show loading spinner only for non-auth pages while auth state is loading
+  if (isLoading && !isAuthPage) {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white">
         <div className="flex-grow flex flex-col items-center justify-center p-6">
@@ -41,14 +28,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // For auth pages, render children regardless of auth state
-  const isAuthPage = pathname === '/signin' || pathname === '/callback' || pathname === '/create-account';
-  if (isAuthPage) {
-    return <>{children}</>;
+  // Handle redirects once auth state is resolved (isLoading is false)
+  if (!isLoading) {
+    if (!isAuthenticated && !isAuthPage) {
+      router.push('/signin');
+      return null; // Important: return null to prevent rendering children during redirect
+    } else if (isAuthenticated && isAuthPage) {
+      router.push('/');
+      return null; // Important: return null to prevent rendering children during redirect
+    }
   }
 
-  // For protected pages, only render if authenticated
-  return isAuthenticated ? <>{children}</> : null;
+  // If not loading and no redirect is needed, or if it's an auth page (even if loading), render children.
+  // This allows auth pages like SignInFlow to manage their own UI during the auth process without being unmounted.
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
