@@ -3,7 +3,7 @@
 import React from 'react';
 import { Inter } from 'next/font/google';
 import '../../globals.css';
-import { AuthProvider } from '../../AuthContext';
+import { AuthProvider } from '@/src/contexts/AuthContext';
 import { BrowserAudioProvider } from '../contexts/BrowserAudioContext'; // Adjust path as needed
 import ProtectedRoute from '../../ProtectedRoute';
 

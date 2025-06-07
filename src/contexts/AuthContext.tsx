@@ -17,6 +17,7 @@ interface AuthContextType {
   signIn: (handle: string) => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
+  emailLinkLogin: (identifier: string, password?: string, token?: string) => Promise<{ success: boolean; needsEmailToken?: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,6 +129,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const emailLinkLogin = async (identifier: string, password?: string, token?: string): Promise<{ success: boolean; needsEmailToken?: boolean; error?: string }> => {
+    setIsLoading(true);
+    setError(null);
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Simulate a real login flow
+    if (password && !token) { // Initial login attempt
+      if (identifier === 'user@example.com' && password === 'password123') {
+        // Simulate 2FA requirement for a specific user
+        if (identifier === 'user@example.com') {
+          console.log('AuthContext: emailLinkLogin - 2FA required for', identifier);
+          setIsLoading(false);
+          return { success: false, needsEmailToken: true };
+        }
+        // Simulate direct success for other dummy users (not implemented here)
+      } else if (identifier === 'test@example.com' && password === 'testpass') {
+          console.log('AuthContext: emailLinkLogin successful (no 2FA) for', identifier);
+          setSession({ /* some dummy session data */ id: 'dummy-session', handle: identifier, did: 'did:example:123', email: identifier } as OAuthSession); // Added type assertion
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return { success: true };
+      }
+      console.log('AuthContext: emailLinkLogin failed for', identifier);
+      setIsLoading(false);
+      setError('Invalid credentials.');
+      return { success: false, error: 'Invalid credentials.' };
+    } else if (password && token) { // 2FA token submission
+      if (identifier === 'user@example.com' && token === '123456') {
+        console.log('AuthContext: emailLinkLogin successful (with 2FA) for', identifier);
+        setSession({ /* some dummy session data */ id: 'dummy-session-2fa', handle: identifier, did: 'did:example:456', email: identifier } as OAuthSession); // Added type assertion
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return { success: true };
+      } else {
+        console.log('AuthContext: emailLinkLogin failed (invalid 2FA token) for', identifier);
+        setIsLoading(false);
+        setError('Invalid 2FA token.');
+        return { success: false, error: 'Invalid 2FA token.' };
+      }
+    }
+
+    setIsLoading(false);
+    setError('Invalid login attempt.');
+    return { success: false, error: 'Invalid login attempt. Password is required.' };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,7 +184,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         session,
         signIn,
         signOut,
-        error
+        error,
+        emailLinkLogin
       }}
     >
       {children}

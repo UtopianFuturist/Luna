@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/src/contexts/AuthContext';
 import WelcomeScreen from './WelcomeScreen';
 import CredentialsScreen from './CredentialsScreen';
 import TwoFactorScreen from './TwoFactorScreen';
