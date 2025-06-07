@@ -139,11 +139,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (password && !token) { // Initial login attempt
       if (identifier === 'user@example.com' && password === 'password123') {
         // Simulate 2FA requirement for a specific user
-        if (identifier === 'user@example.com') {
-          console.log('AuthContext: emailLinkLogin - 2FA required for', identifier);
-          setIsLoading(false);
-          return { success: false, needsEmailToken: true };
-        }
+        console.log('AuthContext: emailLinkLogin - 2FA required for', identifier);
+        setIsLoading(false);
+        return { success: false, needsEmailToken: true };
         // Simulate direct success for other dummy users (not implemented here)
       } else if (identifier === 'test@example.com' && password === 'testpass') {
           console.log('AuthContext: emailLinkLogin successful (no 2FA) for', identifier);
