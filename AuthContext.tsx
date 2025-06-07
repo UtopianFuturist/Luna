@@ -116,9 +116,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
+      /*
       if (!isValidSubject(identifier)) {
         throw new Error('Invalid BlueSky handle or DID format');
       }
+      */
 
       const newAgent = new BskyAgent({
         service: 'https://bsky.social',
