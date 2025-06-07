@@ -159,12 +159,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             };
         }
       } catch (err: any) {
+        console.error('Detailed error from agent.login:', JSON.stringify(err, null, 2));
         console.log('Login error from agent.login:', err);
         if (
-          err.error === 'AuthFactorTokenRequired' || 
-          (err.message && err.message.includes('auth factor token')) ||
-          (err.status === 401 && err.error === 'InvalidToken') ||
-          (err.status === 401 && err.message && err.message.includes('token'))
+          err.error === 'AuthFactorTokenRequired' || // Exact error code
+          (err.message && err.message.toLowerCase().includes('authentication factor required')) || // More general message check
+          (err.message && err.message.toLowerCase().includes('2fa required')) || // Another common message
+          (err.name && err.name.toLowerCase().includes('authfactor')) // Check error name if available
         ) {
           setIsLoading(false);
           return {
