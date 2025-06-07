@@ -181,6 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw err;
       }
     } catch (err: any) {
+      alert("AuthContext: Outer catch block entered. Error: " + JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
       console.error('Failed to login (outer catch):', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to authenticate';
       setError(errorMessage);
