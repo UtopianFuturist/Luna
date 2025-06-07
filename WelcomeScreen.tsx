@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { colors } from '../../utils/colors';
+import { colors } from './colors';
 
 interface WelcomeScreenProps {
   onSignInClick: () => void;
