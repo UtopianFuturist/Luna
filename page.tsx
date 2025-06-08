@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import AppLayout from './src/components/AppLayout'; // Adjusted path to AppLayout
+import AppLayout from '@/components/AppLayout'; // Adjusted path to AppLayout
 
 // You might want to import and use your actual AuthContext here
 // if you need to check auth state directly on this page,
