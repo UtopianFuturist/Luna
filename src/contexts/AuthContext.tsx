@@ -43,10 +43,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       setIsLoading(true);
       setError(null);
+      let initializedAgent: BskyAgent | null = null;
+
       if (typeof window !== 'undefined') {
         try {
-          const storedSession = localStorage.getItem('omnisky_session');
-          const newAgent = new BskyAgent({
+          initializedAgent = new BskyAgent({
             service: 'https://bsky.social', // Default or make configurable
             persistSession: (evt: AtpSessionEvent, sess?: AtpSessionData) => {
               if (evt === 'create' || evt === 'update') {
@@ -62,15 +63,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             },
           });
 
+          const storedSession = localStorage.getItem('omnisky_session');
           if (storedSession) {
             const parsedSession: AtpSessionData = JSON.parse(storedSession);
             // Attempt to resume session
             // Note: BskyAgent's resumeSession internally calls persistSession on success
-            await newAgent.resumeSession(parsedSession);
+            await initializedAgent.resumeSession(parsedSession);
 
-            if (newAgent.session) {
-              setAgent(newAgent);
-              setSession(newAgent.session);
+            if (initializedAgent.session) {
+              setSession(initializedAgent.session);
               setIsAuthenticated(true);
             } else {
               // Session resumption failed (e.g., expired refresh token)
@@ -78,7 +79,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setIsAuthenticated(false);
             }
           } else {
-            setAgent(newAgent); // Set up agent even if no session
             setIsAuthenticated(false);
           }
         } catch (e) {
@@ -87,14 +87,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setError('Failed to initialize session.');
           setIsAuthenticated(false);
         } finally {
+          setAgent(initializedAgent);
           setIsLoading(false);
         }
       } else {
         // Server-side or environment without window/localStorage
+        initializedAgent = new BskyAgent({ service: 'https://bsky.social' });
+        setAgent(initializedAgent);
         setIsAuthenticated(false);
         setIsLoading(false);
-        const newAgent = new BskyAgent({ service: 'https://bsky.social' });
-        setAgent(newAgent);
       }
     };
     initializeAuth();
