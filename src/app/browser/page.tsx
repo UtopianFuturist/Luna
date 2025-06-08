@@ -2,7 +2,7 @@
 
 import React, { useState, useContext } from 'react'; // Added useContext
 import AppLayout from '@/components/AppLayout';
-import { BrowserAudioContext } from '../../contexts/BrowserAudioContext'; // Adjust path
+import { useBrowserAudio } from '@/contexts/BrowserAudioContext'; // Adjust path
 
 const categorizedLinks = [
   {
@@ -74,7 +74,7 @@ const getEmbedAudioVideoUrl = (url: string): string | null => {
 
 
 const BrowserPage: React.FC = () => {
-  const browserAudioCtx = useContext(BrowserAudioContext);
+  const browserAudioCtx = useBrowserAudio();
 
   if (!browserAudioCtx) {
     return <div>Loading audio context...</div>; // Or some other error/loading state
