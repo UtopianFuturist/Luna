@@ -3,8 +3,8 @@
 import React from 'react';
 import { Inter } from 'next/font/google';
 import '../../globals.css';
-import { AuthProvider } from '@/AuthContext';
-import { BrowserAudioProvider } from '../../src/contexts/BrowserAudioContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { BrowserAudioProvider } from '@/contexts/BrowserAudioContext'; // Adjust path as needed
 import ProtectedRoute from '../../ProtectedRoute';
 
 const inter = Inter({ subsets: ['latin'] });
