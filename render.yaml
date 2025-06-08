@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: custom-bluesky-client
-    env: node: "20"
-    region: frankfurt
-    plan: free
-    buildCommand: "yarn install --frozen-lockfile && yarn build"
-    startCommand: "yarn start"
-    healthCheckPath: "/"
+    name: omnisky
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXTAUTH_URL
+        value: https://omnisky.onrender.com
