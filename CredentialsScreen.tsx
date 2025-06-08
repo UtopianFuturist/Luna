@@ -1,9 +1,7 @@
-// Fixed version of CredentialsScreen.tsx
-
 "use client";
 
 import React, { useState } from 'react';
-import { colors } from './colors';
+import { colors } from '@/lib/colors';
 
 interface CredentialsScreenProps {
   onBackClick: () => void;

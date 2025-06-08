@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext'; // Adjusted path assuming AuthContext is at root src
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -32,16 +32,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!isLoading) {
     if (!isAuthenticated && !isAuthPage) {
       router.push('/signin');
-      return null; // Important: return null to prevent rendering children during redirect
+      return null;
     } else if (isAuthenticated && isAuthPage) {
       router.push('/');
-      return null; // Important: return null to prevent rendering children during redirect
+      return null;
     }
   }
 
-  // If not loading and no redirect is needed, or if it's an auth page (even if loading), render children.
-  // This allows auth pages like SignInFlow to manage their own UI during the auth process without being unmounted.
   return <>{children}</>;
 };
 
 export default ProtectedRoute;
+

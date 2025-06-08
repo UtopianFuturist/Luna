@@ -1,7 +1,3 @@
-"use client";
-
-import React from 'react';
-
 export enum SubjectType {
   Handle = 'handle',
   Did = 'did',
@@ -77,3 +73,4 @@ export const formatSubjectForDisplay = (subject: string): string => {
   
   return value;
 };
+

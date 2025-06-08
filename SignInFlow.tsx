@@ -1,13 +1,11 @@
-// Fixed version of SignInFlow.tsx
-
 "use client";
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import WelcomeScreen from './WelcomeScreen';
-import CredentialsScreen from './CredentialsScreen';
-import TwoFactorScreen from './TwoFactorScreen';
+import WelcomeScreen from '@/components/WelcomeScreen';
+import CredentialsScreen from '@/components/CredentialsScreen';
+import TwoFactorScreen from '@/components/TwoFactorScreen';
 
 enum SignInStep {
   WELCOME = 'welcome',
@@ -35,19 +33,18 @@ const SignInFlow: React.FC = () => {
 
   const handleCredentialsBack = () => {
     setCurrentStep(SignInStep.WELCOME);
+    setError(null);
   };
 
   const handleCredentialsNext = async (identifier: string, password: string) => {
     // Store credentials for potential 2FA step
     setIdentifier(identifier);
     setPassword(password);
-    setError(null); // Clear previous errors
+    setError(null);
 
     try {
-      // Call the authentication function from AuthContext
       const result = await emailLinkLogin(identifier, password);
       
-      // Handle the result based on its structure and values
       if (result && typeof result.success === 'boolean') {
         if (result.success) {
           // If login is successful, redirect to home page
@@ -61,12 +58,10 @@ const SignInFlow: React.FC = () => {
           setError(result.error || "Login failed. Please check your credentials.");
         }
       } else {
-        // Handle unexpected result structure
         console.error("SignInFlow: emailLinkLogin returned invalid result structure:", result);
         setError("An unexpected error occurred. Please try again.");
       }
     } catch (err) {
-      // Handle any exceptions thrown during the login process
       console.error("SignInFlow: Critical error during handleCredentialsNext:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     }
@@ -74,13 +69,13 @@ const SignInFlow: React.FC = () => {
 
   const handleTwoFactorBack = () => {
     setCurrentStep(SignInStep.CREDENTIALS);
+    setError(null);
   };
 
   const handleTwoFactorNext = async (code: string) => {
-    setError(null); // Clear previous errors
+    setError(null);
 
     try {
-      // Call the authentication function with the 2FA code
       const result = await emailLinkLogin(identifier, password, code);
       
       if (result && typeof result.success === 'boolean') {
@@ -88,17 +83,14 @@ const SignInFlow: React.FC = () => {
           // If 2FA verification is successful, redirect to home page
           router.push('/');
         } else {
-          // If 2FA verification failed, display the error
           console.log("SignInFlow: 2FA attempt failed:", result.error);
           setError(result.error || 'Invalid confirmation code. Please try again.');
         }
       } else {
-        // Handle unexpected result structure
         console.error("SignInFlow: emailLinkLogin (2FA) returned invalid result structure:", result);
         setError('An unexpected error occurred. Please try again.');
       }
     } catch (err) {
-      // Handle any exceptions thrown during the 2FA process
       console.error("SignInFlow: Critical error during handleTwoFactorNext:", err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
     }
@@ -115,18 +107,32 @@ const SignInFlow: React.FC = () => {
       );
     case SignInStep.CREDENTIALS:
       return (
-        <CredentialsScreen 
-          onBackClick={handleCredentialsBack}
-          onNextClick={handleCredentialsNext}
-        />
+        <div>
+          {error && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-900/90 text-red-200 px-4 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
+          <CredentialsScreen 
+            onBackClick={handleCredentialsBack}
+            onNextClick={handleCredentialsNext}
+          />
+        </div>
       );
     case SignInStep.TWO_FACTOR:
       return (
-        <TwoFactorScreen 
-          onBackClick={handleTwoFactorBack}
-          onNextClick={handleTwoFactorNext}
-          identifier={identifier}
-        />
+        <div>
+          {error && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-900/90 text-red-200 px-4 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
+          <TwoFactorScreen 
+            onBackClick={handleTwoFactorBack}
+            onNextClick={handleTwoFactorNext}
+            identifier={identifier}
+          />
+        </div>
       );
     default:
       return null;
