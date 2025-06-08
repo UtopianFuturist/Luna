@@ -2,6 +2,7 @@ services:
   - type: web
     name: omnisky
     env: node
+    nodeVersion: "20"
     buildCommand: yarn install --frozen-lockfile --production=false && yarn build
     startCommand: yarn start
     envVars:
