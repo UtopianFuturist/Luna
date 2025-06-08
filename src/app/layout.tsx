@@ -1,15 +1,10 @@
 // src/app/layout.tsx
 import React from 'react';
-import dynamic from 'next/dynamic';
+// No longer need next/dynamic here for BrowserAudioProvider
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
-// import { BrowserAudioProvider } from '@/contexts/BrowserAudioContext';
 import ProtectedRoute from '@/components/ProtectedRoute'; // Path alias for components
-
-const BrowserAudioProvider = dynamic(
-  () => import('@/contexts/BrowserAudioContext').then(mod => mod.BrowserAudioProvider),
-  { ssr: false }
-);
+import ClientSideBrowserAudioProvider from '@/components/ClientSideBrowserAudioProvider';
 
 export const metadata = {
   title: 'OmniSky - The Everything Client',
@@ -25,12 +20,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <BrowserAudioProvider>
+          <ClientSideBrowserAudioProvider>
             {/* ProtectedRoute will now gate access to `children` */}
             <ProtectedRoute>
               {children}
             </ProtectedRoute>
-          </BrowserAudioProvider>
+          </ClientSideBrowserAudioProvider>
         </AuthProvider>
       </body>
     </html>
