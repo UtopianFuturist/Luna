@@ -1,9 +1,7 @@
-// Fixed version of TwoFactorScreen.tsx
-
 "use client";
 
 import React, { useState } from 'react';
-import { colors } from './colors';
+import { colors } from '@/lib/colors';
 
 interface TwoFactorScreenProps {
   onBackClick: () => void;
@@ -14,9 +12,9 @@ interface TwoFactorScreenProps {
 const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({ 
   onBackClick, 
   onNextClick,
-  identifier
+  identifier 
 }) => {
-  const [confirmationCode, setConfirmationCode] = useState('');
+  const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +22,7 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
     e.preventDefault();
     
     // Validate input
-    if (!confirmationCode.trim()) {
+    if (!code.trim()) {
       setError('Please enter the confirmation code');
       return;
     }
@@ -33,7 +31,7 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
     setIsLoading(true);
     
     try {
-      await onNextClick(confirmationCode);
+      await onNextClick(code);
     } catch (error) {
       console.error("TwoFactorScreen: Error during submission:", error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -46,7 +44,12 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
     <div className="flex flex-col min-h-screen bg-black text-white p-4">
       <div className="flex flex-col w-full max-w-md mx-auto">
         {/* Header */}
-        <h1 className="text-4xl font-bold mb-8">Sign in</h1>
+        <h1 className="text-4xl font-bold mb-4">Check your email</h1>
+        
+        {/* Description */}
+        <p className="text-gray-400 mb-8 text-lg">
+          Enter the confirmation code that we sent to {identifier}
+        </p>
         
         {error && (
           <div className="mb-4 p-3 bg-red-900/50 text-red-200 rounded-lg">
@@ -55,146 +58,36 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
         )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Hosting Provider Section */}
+          {/* Confirmation Code Input */}
           <div className="mb-6">
             <label className="block text-gray-400 mb-2 text-lg">
-              Hosting provider
-            </label>
-            <div 
-              className="flex items-center justify-between p-4 rounded-lg"
-              style={{ backgroundColor: colors.darkInputBackground }}
-            >
-              <div className="flex items-center">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="mr-3 text-gray-400"
-                >
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
-                  <path d="M2 12h20"/>
-                </svg>
-                <span className="text-lg">Bluesky Social</span>
-              </div>
-              <button type="button">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="text-gray-400"
-                >
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          
-          {/* Account Section */}
-          <div className="mb-6">
-            <label className="block text-gray-400 mb-2 text-lg">
-              Account
-            </label>
-            <div 
-              className="flex items-center p-4 rounded-lg mb-4"
-              style={{ backgroundColor: colors.darkInputBackground }}
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="mr-3 text-gray-400"
-              >
-                <circle cx="12" cy="8" r="5"/>
-                <path d="M20 21a8 8 0 0 0-16 0"/>
-              </svg>
-              <span className="text-gray-400 text-lg">{identifier || 'Account information hidden'}</span>
-            </div>
-            
-            <div 
-              className="flex items-center justify-between p-4 rounded-lg"
-              style={{ backgroundColor: colors.darkInputBackground }}
-            >
-              <div className="flex items-center w-full">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="mr-3 text-gray-400"
-                >
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                <span className="text-gray-400 text-lg">••••••••</span>
-              </div>
-              <button type="button" className="text-gray-400" disabled={isLoading}>
-                Forgot?
-              </button>
-            </div>
-          </div>
-          
-          {/* 2FA Section */}
-          <div className="mb-6">
-            <label className="block text-gray-400 mb-2 text-lg">
-              2FA Confirmation
+              Confirmation code
             </label>
             <div 
               className="flex items-center p-4 rounded-lg"
               style={{ backgroundColor: colors.darkInputBackground }}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="mr-3 text-gray-400"
-              >
-                <rect x="3" y="11" width="18" height="10" rx="2"/>
-                <circle cx="12" cy="5" r="2"/>
-                <path d="M12 7v4"/>
-                <line x1="8" y1="16" x2="16" y2="16"/>
-              </svg>
               <input
                 type="text"
-                placeholder="Confirmation code"
-                value={confirmationCode}
-                onChange={(e) => setConfirmationCode(e.target.value)}
-                className="bg-transparent border-none outline-none w-full text-lg"
+                placeholder="Enter confirmation code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="bg-transparent border-none outline-none w-full text-lg text-center tracking-widest"
                 disabled={isLoading}
+                maxLength={6}
               />
             </div>
-            <p className="text-gray-400 mt-3">
-              Check your email for a sign in code and enter it here.
-            </p>
+          </div>
+          
+          {/* Resend Link */}
+          <div className="text-center mb-8">
+            <button 
+              type="button" 
+              className="text-blue-400 hover:text-blue-300 text-lg"
+              disabled={isLoading}
+            >
+              Didn't receive a code?
+            </button>
           </div>
           
           {/* Buttons */}
@@ -211,9 +104,9 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
             
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !code.trim()}
               className={`px-8 py-3 rounded-lg text-lg font-medium flex items-center justify-center min-w-[100px] ${
-                isLoading ? 'opacity-70' : ''
+                isLoading || !code.trim() ? 'opacity-50' : ''
               }`}
               style={{ backgroundColor: colors.vibrantBlue }}
             >
@@ -223,7 +116,7 @@ const TwoFactorScreen: React.FC<TwoFactorScreenProps> = ({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Loading...
+                  Verifying...
                 </>
               ) : (
                 'Next'

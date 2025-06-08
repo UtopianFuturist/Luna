@@ -1,23 +1,11 @@
-// Vercel Deployment Preparation Notes:
-// The following configurations were noted during Vercel deployment preparation:
-// 1. `eslint: { ignoreDuringBuilds: true }`: It's recommended to resolve ESLint issues and remove this option for production.
-// 2. `typescript: { ignoreBuildErrors: true }`: It's recommended to resolve TypeScript errors and remove this option for production.
-// 3. `images: { unoptimized: true }`: Next.js Image Optimization is currently disabled. Vercel provides its own image optimization.
-//    You may want to review this setting to ensure optimal image handling.
-//    Consider removing `unoptimized: true` to leverage Vercel's image optimization,
-//    or confirm if this setting is intentional for your project's needs.
-//
 import { NextConfig } from 'next'
 import path from 'path'
 
 const nextConfig: NextConfig = {
   /* config options here */
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Removed eslint and typescript ignore options for production builds
+  // These should be resolved rather than ignored
+  
   // Disabling static export to support dynamic routes
   // output: "export",
   images: {
@@ -25,8 +13,25 @@ const nextConfig: NextConfig = {
   },
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname, './src')
+    // Optimize webpack for better memory usage
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    }
     return config
-  }
+  },
+  // Remove experimental optimizeCss to reduce memory usage
+  swcMinify: true,
 }
 
 export default nextConfig
+
