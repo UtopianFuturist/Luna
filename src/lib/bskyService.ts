@@ -3,76 +3,554 @@ import {
   AppBskyActorDefs,
   AppBskyFeedDefs,
   AppBskyNotificationListNotifications,
-  ChatBskyConvoDefs, // Import for chat conversation definitions
-  ChatBskyActorDefs  // Import for chat actor definitions (like declaration)
+  AppBskyFeedGetPostThread,
+  AppBskyGraphDefs,
+  AppBskyActorSearchActors,
+  ChatBskyConvoDefs,
+  ChatBskyActorDefs,
+  ComAtprotoRepoStrongRef,
+  AppBskyFeedPost,
+  AppBskyEmbedRecord,
+  AppBskyEmbedImages,
+  AppBskyEmbedExternal,
+  AppBskyEmbedRecordWithMedia,
+  RichText
 } from '@atproto/api';
 
-// Re-exporting for convenience if these types are needed by consumers of this service
+// Re-exporting types for convenience
 export type ProfileViewDetailed = AppBskyActorDefs.ProfileViewDetailed;
-// Re-exporting Notification type for use in UI components
+export type ProfileViewBasic = AppBskyActorDefs.ProfileViewBasic;
 export type Notification = AppBskyNotificationListNotifications.Notification;
 export type FeedViewPost = AppBskyFeedDefs.FeedViewPost;
 export type GeneratorView = AppBskyFeedDefs.GeneratorView;
-export type ActorPreference = AppBskyActorDefs.Preference; // General preference type
-export type SavedFeedsPref = AppBskyActorDefs.SavedFeedsPref; // Specific preference type for saved feeds
-export type PersonalDetailsPref = AppBskyActorDefs.PersonalDetailsPref; // Specific preference type for personal details
+export type ActorPreference = AppBskyActorDefs.Preference;
+export type SavedFeedsPref = AppBskyActorDefs.SavedFeedsPref;
+export type PersonalDetailsPref = AppBskyActorDefs.PersonalDetailsPref;
+export type ThreadViewPost = AppBskyFeedDefs.ThreadViewPost;
+export type PostView = AppBskyFeedDefs.PostView;
 
+// Chat types
+export type ConvoView = ChatBskyConvoDefs.ConvoView;
+export type MessageView = ChatBskyConvoDefs.MessageView;
+export type MessageViewSent = ChatBskyConvoDefs.MessageViewSent;
+export type LogBeginConvo = ChatBskyConvoDefs.LogBeginConvo;
+export type ActorDeclaration = ChatBskyActorDefs.Declaration;
+
+// Interface definitions
 export interface FeedPage {
   feed: FeedViewPost[];
   cursor?: string;
 }
 
-// Interface for the listNotifications response to match SDK structure
 export interface NotificationsPage {
-  notifications: Notification[]; // Using the re-exported Notification type
+  notifications: Notification[];
   cursor?: string;
-  // seenAt?: string; // listNotifications itself doesn't return seenAt, but updateSeen uses it.
 }
-
-// --- Chat Service Types ---
-export type ConvoView = ChatBskyConvoDefs.ConvoView;
-export type MessageView = ChatBskyConvoDefs.MessageView; // This is likely a union: MessageView | DeletedMessageView etc.
-export type MessageViewSent = ChatBskyConvoDefs.MessageViewSent;
-export type LogBeginConvo = ChatBskyConvoDefs.LogBeginConvo; // Example if needed for logs
 
 export interface ConvosPage {
   convos: ConvoView[];
   cursor?: string;
 }
+
 export interface MessagesPage {
-  messages: MessageView[]; // Array of MessageView or union types
+  messages: MessageView[];
   cursor?: string;
 }
-export type ActorDeclaration = ChatBskyActorDefs.Declaration;
 
-// --- Chat Service Functions ---
+export interface FollowsPage {
+  follows: AppBskyGraphDefs.Follow[];
+  cursor?: string;
+}
 
-/**
- * Fetches the list of conversations for the authenticated user.
- * @param agent Initialized BskyAgent
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch (default 30)
- * @returns Object containing an array of conversations and an optional cursor
- */
+export interface FollowersPage {
+  followers: ProfileViewBasic[];
+  cursor?: string;
+}
+
+export interface SearchResults {
+  actors: ProfileViewBasic[];
+  cursor?: string;
+}
+
+export interface PostThreadResponse {
+  thread: ThreadViewPost;
+}
+
+// Agent management
+export const getAgent = (): BskyAgent => {
+  return new BskyAgent({
+    service: 'https://bsky.social',
+  });
+};
+
+// Profile functions
+export const getProfile = async (agent: BskyAgent, handleOrDid: string): Promise<ProfileViewDetailed> => {
+  try {
+    const { data } = await agent.app.bsky.actor.getProfile({ actor: handleOrDid });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching profile for ${handleOrDid}:`, error);
+    throw error;
+  }
+};
+
+export const getProfiles = async (agent: BskyAgent, actors: string[]): Promise<ProfileViewDetailed[]> => {
+  try {
+    const { data } = await agent.app.bsky.actor.getProfiles({ actors });
+    return data.profiles;
+  } catch (error) {
+    console.error('Error fetching profiles:', error);
+    throw error;
+  }
+};
+
+export const searchProfiles = async (agent: BskyAgent, query: string, cursor?: string, limit: number = 25): Promise<SearchResults> => {
+  try {
+    const { data } = await agent.app.bsky.actor.searchActors({
+      term: query,
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      actors: data.actors,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error(`Error searching profiles for "${query}":`, error);
+    throw error;
+  }
+};
+
+// Feed functions
+export const getTimeline = async (agent: BskyAgent, cursor?: string, limit: number = 20): Promise<FeedPage> => {
+  try {
+    const params: any = { limit };
+    if (cursor) params.cursor = cursor;
+
+    const { data } = await agent.app.bsky.feed.getTimeline(params);
+    return {
+      feed: data.feed,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error('Error fetching timeline:', error);
+    throw error;
+  }
+};
+
+export const getAuthorFeed = async (agent: BskyAgent, actor: string, cursor?: string, limit: number = 25): Promise<FeedPage> => {
+  try {
+    const { data } = await agent.app.bsky.feed.getAuthorFeed({ 
+      actor, 
+      limit: Math.min(limit, 100), 
+      cursor 
+    });
+    return {
+      feed: data.feed,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error(`Error fetching author feed for ${actor}:`, error);
+    throw error;
+  }
+};
+
+export const getFeed = async (agent: BskyAgent, feedUri: string, cursor?: string, limit: number = 20): Promise<FeedPage> => {
+  try {
+    const { data } = await agent.app.bsky.feed.getFeed({
+      feed: feedUri,
+      cursor,
+      limit: Math.min(limit, 100),
+    });
+    return {
+      feed: data.feed,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error(`Error fetching feed ${feedUri}:`, error);
+    throw error;
+  }
+};
+
+export const getFeedGenerators = async (agent: BskyAgent, feedUris: string[]): Promise<{ feeds: GeneratorView[] }> => {
+  try {
+    const { data } = await agent.app.bsky.feed.getFeedGenerators({ feeds: feedUris });
+    return data;
+  } catch (error) {
+    console.error("Error fetching feed generators:", error);
+    throw error;
+  }
+};
+
+export const getPostThread = async (agent: BskyAgent, uri: string, depth?: number): Promise<PostThreadResponse> => {
+  try {
+    const { data } = await agent.app.bsky.feed.getPostThread({
+      uri,
+      depth: depth || 6
+    });
+    return {
+      thread: data.thread as ThreadViewPost
+    };
+  } catch (error) {
+    console.error(`Error fetching post thread for ${uri}:`, error);
+    throw error;
+  }
+};
+
+// Post functions
+export const createPost = async (
+  agent: BskyAgent, 
+  text: string, 
+  options?: {
+    reply?: { root: ComAtprotoRepoStrongRef.Main; parent: ComAtprotoRepoStrongRef.Main };
+    images?: Blob[];
+    external?: { uri: string; title: string; description: string };
+    quote?: ComAtprotoRepoStrongRef.Main;
+  }
+): Promise<{ uri: string; cid: string }> => {
+  try {
+    const rt = new RichText({ text });
+    await rt.detectFacets(agent);
+
+    const record: AppBskyFeedPost.Record = {
+      $type: 'app.bsky.feed.post',
+      text: rt.text,
+      facets: rt.facets,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Handle reply
+    if (options?.reply) {
+      record.reply = options.reply;
+    }
+
+    // Handle images
+    if (options?.images && options.images.length > 0) {
+      const uploadedImages = [];
+      for (const image of options.images) {
+        const { data } = await agent.uploadBlob(image, { encoding: 'image/jpeg' });
+        uploadedImages.push({
+          alt: '',
+          image: data.blob,
+        });
+      }
+      record.embed = {
+        $type: 'app.bsky.embed.images',
+        images: uploadedImages,
+      } as AppBskyEmbedImages.Main;
+    }
+
+    // Handle external link
+    if (options?.external) {
+      record.embed = {
+        $type: 'app.bsky.embed.external',
+        external: options.external,
+      } as AppBskyEmbedExternal.Main;
+    }
+
+    // Handle quote post
+    if (options?.quote) {
+      if (record.embed) {
+        // If we already have an embed (images or external), wrap it with the quote
+        record.embed = {
+          $type: 'app.bsky.embed.recordWithMedia',
+          record: {
+            $type: 'app.bsky.embed.record',
+            record: options.quote,
+          },
+          media: record.embed,
+        } as AppBskyEmbedRecordWithMedia.Main;
+      } else {
+        record.embed = {
+          $type: 'app.bsky.embed.record',
+          record: options.quote,
+        } as AppBskyEmbedRecord.Main;
+      }
+    }
+
+    const { data } = await agent.post(record);
+    return data;
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+};
+
+export const deletePost = async (agent: BskyAgent, uri: string): Promise<void> => {
+  try {
+    await agent.deletePost(uri);
+  } catch (error) {
+    console.error(`Error deleting post ${uri}:`, error);
+    throw error;
+  }
+};
+
+export const likePost = async (agent: BskyAgent, uri: string, cid: string): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.like(uri, cid);
+    return data;
+  } catch (error) {
+    console.error(`Error liking post ${uri}:`, error);
+    throw error;
+  }
+};
+
+export const unlikePost = async (agent: BskyAgent, likeUri: string): Promise<void> => {
+  try {
+    await agent.deleteLike(likeUri);
+  } catch (error) {
+    console.error(`Error unliking post ${likeUri}:`, error);
+    throw error;
+  }
+};
+
+export const repost = async (agent: BskyAgent, uri: string, cid: string): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.repost(uri, cid);
+    return data;
+  } catch (error) {
+    console.error(`Error reposting ${uri}:`, error);
+    throw error;
+  }
+};
+
+export const unrepost = async (agent: BskyAgent, repostUri: string): Promise<void> => {
+  try {
+    await agent.deleteRepost(repostUri);
+  } catch (error) {
+    console.error(`Error unreposting ${repostUri}:`, error);
+    throw error;
+  }
+};
+
+// Follow functions
+export const followUser = async (agent: BskyAgent, did: string): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.follow(did);
+    return data;
+  } catch (error) {
+    console.error(`Error following user ${did}:`, error);
+    throw error;
+  }
+};
+
+export const unfollowUser = async (agent: BskyAgent, followUri: string): Promise<void> => {
+  try {
+    await agent.deleteFollow(followUri);
+  } catch (error) {
+    console.error(`Error unfollowing user ${followUri}:`, error);
+    throw error;
+  }
+};
+
+export const getFollows = async (agent: BskyAgent, actor: string, cursor?: string, limit: number = 50): Promise<FollowsPage> => {
+  try {
+    const { data } = await agent.app.bsky.graph.getFollows({
+      actor,
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      follows: data.follows,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error(`Error fetching follows for ${actor}:`, error);
+    throw error;
+  }
+};
+
+export const getFollowers = async (agent: BskyAgent, actor: string, cursor?: string, limit: number = 50): Promise<FollowersPage> => {
+  try {
+    const { data } = await agent.app.bsky.graph.getFollowers({
+      actor,
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      followers: data.followers,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error(`Error fetching followers for ${actor}:`, error);
+    throw error;
+  }
+};
+
+// Mute functions
+export const mute = async (agent: BskyAgent, did: string): Promise<void> => {
+  try {
+    await agent.mute(did);
+  } catch (error) {
+    console.error(`Error muting user ${did}:`, error);
+    throw error;
+  }
+};
+
+export const unmute = async (agent: BskyAgent, did: string): Promise<void> => {
+  try {
+    await agent.unmute(did);
+  } catch (error) {
+    console.error(`Error unmuting user ${did}:`, error);
+    throw error;
+  }
+};
+
+export const getMutes = async (agent: BskyAgent, cursor?: string, limit: number = 50): Promise<{ mutes: ProfileViewBasic[]; cursor?: string }> => {
+  try {
+    const { data } = await agent.app.bsky.graph.getMutes({
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      mutes: data.mutes,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error('Error fetching mutes:', error);
+    throw error;
+  }
+};
+
+// Block functions
+export const blockUser = async (agent: BskyAgent, did: string): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.app.bsky.graph.block.create(
+      { repo: agent.session?.did! },
+      { subject: did, createdAt: new Date().toISOString() }
+    );
+    return data;
+  } catch (error) {
+    console.error(`Error blocking user ${did}:`, error);
+    throw error;
+  }
+};
+
+export const unblockUser = async (agent: BskyAgent, blockUri: string): Promise<void> => {
+  try {
+    const uri = new URL(blockUri);
+    const rkey = uri.pathname.split('/').pop()!;
+    await agent.app.bsky.graph.block.delete({
+      repo: agent.session?.did!,
+      rkey
+    });
+  } catch (error) {
+    console.error(`Error unblocking user ${blockUri}:`, error);
+    throw error;
+  }
+};
+
+export const getBlocks = async (agent: BskyAgent, cursor?: string, limit: number = 50): Promise<{ blocks: ProfileViewBasic[]; cursor?: string }> => {
+  try {
+    const { data } = await agent.app.bsky.graph.getBlocks({
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      blocks: data.blocks,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error('Error fetching blocks:', error);
+    throw error;
+  }
+};
+
+// Notification functions
+export const listNotifications = async (agent: BskyAgent, cursor?: string, limit: number = 30): Promise<NotificationsPage> => {
+  try {
+    const { data } = await agent.app.bsky.notification.listNotifications({
+      limit: Math.min(limit, 100),
+      cursor
+    });
+    return {
+      notifications: data.notifications,
+      cursor: data.cursor
+    };
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+};
+
+export const getUnreadCount = async (agent: BskyAgent): Promise<{ count: number }> => {
+  try {
+    const { data } = await agent.app.bsky.notification.getUnreadCount();
+    return data;
+  } catch (error) {
+    console.error("Error fetching unread notification count:", error);
+    throw error;
+  }
+};
+
+export const markAsRead = async (agent: BskyAgent, seenAt?: string): Promise<void> => {
+  try {
+    await agent.app.bsky.notification.updateSeen({ 
+      seenAt: seenAt || new Date().toISOString() 
+    });
+  } catch (error) {
+    console.error("Error marking notifications as read:", error);
+    throw error;
+  }
+};
+
+export const updateSeen = markAsRead; // Alias for backward compatibility
+
+// Preferences functions
+export const getPreferences = async (agent: BskyAgent): Promise<ActorPreference[]> => {
+  try {
+    const { data } = await agent.app.bsky.actor.getPreferences();
+    return data.preferences;
+  } catch (error) {
+    console.error("Error fetching preferences:", error);
+    throw error;
+  }
+};
+
+export const setPreferences = async (agent: BskyAgent, preferences: ActorPreference[]): Promise<void> => {
+  try {
+    await agent.app.bsky.actor.putPreferences({ preferences });
+  } catch (error) {
+    console.error("Error setting preferences:", error);
+    throw error;
+  }
+};
+
+export const updateSavedFeedsPreference = async (agent: BskyAgent, pinned: string[], saved: string[]): Promise<void> => {
+  try {
+    const currentPrefs = await getPreferences(agent);
+    const otherPrefs = currentPrefs.filter(p => p.$type !== 'app.bsky.actor.defs#savedFeeds');
+
+    const newSavedFeedsPref: SavedFeedsPref = {
+      $type: 'app.bsky.actor.defs#savedFeeds',
+      pinned: pinned,
+      saved: saved,
+    };
+
+    await setPreferences(agent, [...otherPrefs, newSavedFeedsPref]);
+  } catch (error) {
+    console.error("Error updating saved feeds preference:", error);
+    throw error;
+  }
+};
+
+// Chat functions
 export const listConvos = async (agent: BskyAgent, cursor?: string, limit: number = 30): Promise<ConvosPage> => {
   try {
     const { data } = await agent.api.chat.bsky.convo.listConvos({
       limit: Math.min(limit, 100),
       cursor
     });
-    return data as ConvosPage;
+    return {
+      convos: data.convos,
+      cursor: data.cursor
+    };
   } catch (error) {
     console.error("Error fetching conversations:", error);
     throw error;
   }
 };
 
-/**
- * Fetches details for a specific conversation.
- * @param agent Initialized BskyAgent
- * @param convoId The conversation ID
- * @returns The conversation view
- */
 export const getConvo = async (agent: BskyAgent, convoId: string): Promise<ConvoView> => {
   try {
     const { data } = await agent.api.chat.bsky.convo.getConvo({
@@ -85,14 +563,6 @@ export const getConvo = async (agent: BskyAgent, convoId: string): Promise<Convo
   }
 };
 
-/**
- * Fetches messages for a specific conversation.
- * @param agent Initialized BskyAgent
- * @param convoId The conversation ID
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch (default 30)
- * @returns Object containing an array of messages and an optional cursor
- */
 export const getMessages = async (agent: BskyAgent, convoId: string, cursor?: string, limit: number = 30): Promise<MessagesPage> => {
   try {
     const { data } = await agent.api.chat.bsky.convo.getMessages({
@@ -100,20 +570,16 @@ export const getMessages = async (agent: BskyAgent, convoId: string, cursor?: st
       limit: Math.min(limit, 100),
       cursor
     });
-    return data as MessagesPage;
+    return {
+      messages: data.messages,
+      cursor: data.cursor
+    };
   } catch (error) {
     console.error(`Error fetching messages for conversation ${convoId}:`, error);
     throw error;
   }
 };
 
-/**
- * Sends a message to a specific conversation.
- * @param agent Initialized BskyAgent
- * @param convoId The conversation ID
- * @param text The message text
- * @returns The sent message view
- */
 export const sendMessage = async (agent: BskyAgent, convoId: string, text: string): Promise<MessageViewSent> => {
   try {
     const { data } = await agent.api.chat.bsky.convo.sendMessage({
@@ -130,314 +596,212 @@ export const sendMessage = async (agent: BskyAgent, convoId: string, text: strin
   }
 };
 
-
-/**
- * Fetches a user's detailed profile.
- * @param agent Initialized BskyAgent
- * @param handleOrDid User's handle or DID
- * @returns Detailed profile view
- */
-export const getProfile = async (agent: BskyAgent, handleOrDid: string): Promise<ProfileViewDetailed> => {
+export const createConvo = async (agent: BskyAgent, members: string[]): Promise<ConvoView> => {
   try {
-    const { data } = await agent.app.bsky.actor.getProfile({ actor: handleOrDid });
-    return data;
-  } catch (error) {
-    console.error(`Error fetching profile for ${handleOrDid}:`, error);
-    throw error;
-  }
-};
-
-/**
- * Fetches a specific author's feed (posts by the author).
- * @param agent Initialized BskyAgent
- * @param actor DID or handle of the author
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch
- * @returns Promise<FeedPage>
- */
-export const getAuthorFeed = async (agent: BskyAgent, actor: string, cursor?: string, limit: number = 25): Promise<FeedPage> => {
-  try {
-    const { data } = await agent.app.bsky.feed.getAuthorFeed({ actor, limit, cursor });
-    return data as FeedPage; // Assuming the SDK's response structure matches FeedPage { feed, cursor? }
-  } catch (error) {
-    console.error(`Error fetching author feed for ${actor}:`, error);
-    throw error;
-  }
-};
-
-
-// --- Notification Service Functions ---
-
-/**
- * Fetches a list of notifications for the authenticated user.
- * @param agent Initialized BskyAgent
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch (default 20, max 100)
- * @returns Object containing an array of notifications and an optional cursor
- */
-export const listNotifications = async (agent: BskyAgent, cursor?: string, limit: number = 30): Promise<NotificationsPage> => {
-  try {
-    const { data } = await agent.app.bsky.notification.listNotifications({
-      limit: Math.min(limit, 100), // Enforce maximum limit
-      cursor
+    const { data } = await agent.api.chat.bsky.convo.createConvo({
+      members
     });
-    // Ensure the returned data matches the NotificationsPage structure.
-    // The SDK's data should be directly compatible if Notification type is from AppBskyNotificationListNotifications.
-    return data as NotificationsPage;
+    return data.convo;
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    console.error('Error creating conversation:', error);
     throw error;
   }
 };
 
-/**
- * Fetches the count of unread notifications for the authenticated user.
- * @param agent Initialized BskyAgent
- * @returns Object containing the count of unread notifications
- */
-export const getUnreadCount = async (agent: BskyAgent): Promise<{ count: number }> => {
+export const leaveConvo = async (agent: BskyAgent, convoId: string): Promise<void> => {
   try {
-    const { data } = await agent.app.bsky.notification.getUnreadCount();
-    return data;
-  } catch (error) {
-    console.error("Error fetching unread notification count:", error);
-    throw error;
-  }
-};
-
-/**
- * Marks notifications as seen for the authenticated user.
- * @param agent Initialized BskyAgent
- * @param seenAt Optional ISO 8601 timestamp. If not provided, server typically uses current time.
- * @returns Promise resolving when notifications have been marked as seen
- */
-export const updateSeen = async (agent: BskyAgent, seenAt?: string): Promise<void> => {
-  try {
-    await agent.app.bsky.notification.updateSeen({ seenAt: seenAt || new Date().toISOString() });
-  } catch (error) {
-    console.error("Error updating notification seen time:", error);
-    throw error;
-  }
-};
-
-/**
- * Fetches the preferences for the currently authenticated user.
- * Note: The API returns an object { preferences: ActorPreference[] }.
- * This function extracts and returns the array of preferences.
- * @param agent Initialized BskyAgent
- * @returns Array of user preferences
- */
-export const getPreferences = async (agent: BskyAgent): Promise<ActorPreference[]> => {
-  try {
-    const { data } = await agent.app.bsky.actor.getPreferences();
-    return data.preferences;
-  } catch (error) {
-    console.error("Error fetching preferences:", error);
-    throw error;
-  }
-};
-
-/**
- * Fetches details for a list of feed generators.
- * @param agent Initialized BskyAgent
- * @param feedUris Array of AT URIs for the feed generators
- * @returns Object containing an array of feed generator views
- */
-export const getFeedGenerators = async (agent: BskyAgent, feedUris: string[]): Promise<{ feeds: GeneratorView[] }> => {
-  try {
-    const { data } = await agent.app.bsky.feed.getFeedGenerators({ feeds: feedUris });
-    return data;
-  } catch (error) {
-    console.error("Error fetching feed generators:", error);
-    throw error;
-  }
-};
-
-/**
- * Fetches a specific feed (e.g., from a feed generator).
- * @param agent Initialized BskyAgent
- * @param feedUri AT URI of the feed generator
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch (default 20)
- * @returns Object containing an array of feed posts and an optional cursor for pagination
- */
-export const getFeed = async (agent: BskyAgent, feedUri: string, cursor?: string, limit: number = 20): Promise<FeedPage> => {
-  try {
-    const { data } = await agent.app.bsky.feed.getFeed({
-      feed: feedUri,
-      cursor,
-      limit,
+    await agent.api.chat.bsky.convo.leaveConvo({
+      convoId
     });
-    return data; // Return the whole data object { feed, cursor? }
   } catch (error) {
-    console.error(`Error fetching feed ${feedUri}:`, error);
+    console.error(`Error leaving conversation ${convoId}:`, error);
     throw error;
   }
 };
 
-/**
- * Fetches the main timeline for the authenticated user (e.g., "Following" feed).
- * @param agent Initialized BskyAgent
- * @param algorithm Optional: The algorithm for the timeline (e.g., 'reverse-chronological'). Default is usually "Following".
- *                  This parameter might be deprecated or handled differently by BskyAgent.
- *                  If you want a specific feed generator, use `getFeed` instead.
- * @param cursor Cursor for pagination
- * @param limit Number of items to fetch (default 20)
- * @returns Array of feed view posts
- */
-export const getTimeline = async (agent: BskyAgent, algorithm?: string, cursor?: string, limit: number = 20): Promise<FeedViewPost[]> => {
+export const muteConvo = async (agent: BskyAgent, convoId: string): Promise<ConvoView> => {
   try {
-    const params: AppBskyFeedDefs.GetTimeline.QueryParams = { limit };
-    if (algorithm) {
-      // Note: The 'algorithm' parameter for getTimeline is for "algorithmic feeds"
-      // that are not feed generators. For "Following" it's often implicit.
-      // If 'feedUri' was meant to be a feed generator URI, getFeed should be used.
-      // This is a bit ambiguous in the SDK, let's assume 'algorithm' is a specific timeline algo name if provided.
-      // However, BskyAgent.getTimeline() doesn't seem to take an 'algorithm' param directly in some versions.
-      // It might take a 'feed' param for specific algorithm URIs, or it might be implicit.
-      // For a standard "Following" timeline, no algorithm or feed param is needed.
-      // Let's use a generic call for now, assuming default "Following" timeline.
-      // If a specific algo is needed, the caller might need to use getFeed with the algo's AT URI.
-      // params.algorithm = algorithm; // This line might be incorrect depending on exact SDK usage for custom algos
-    }
-    if (cursor) params.cursor = cursor;
-
-    const { data } = await agent.app.bsky.feed.getTimeline(params);
-    return data.feed;
+    const { data } = await agent.api.chat.bsky.convo.muteConvo({
+      convoId
+    });
+    return data.convo;
   } catch (error) {
-    console.error(`Error fetching timeline (algorithm: ${algorithm}):`, error);
+    console.error(`Error muting conversation ${convoId}:`, error);
     throw error;
   }
 };
 
-
-/**
- * Sets (replaces) the preferences for the currently authenticated user.
- * @param agent Initialized BskyAgent
- * @param preferences Array of preference objects to set.
- *                    These should conform to types like `AppBskyActorDefs.SavedFeedsPref`, etc.
- * @returns Promise resolving when preferences are set
- */
-export const setPreferences = async (agent: BskyAgent, preferences: ActorPreference[]): Promise<void> => {
+export const unmuteConvo = async (agent: BskyAgent, convoId: string): Promise<ConvoView> => {
   try {
-    await agent.app.bsky.actor.putPreferences({ preferences });
+    const { data } = await agent.api.chat.bsky.convo.unmuteConvo({
+      convoId
+    });
+    return data.convo;
   } catch (error) {
-    console.error("Error setting preferences:", error);
+    console.error(`Error unmuting conversation ${convoId}:`, error);
     throw error;
   }
 };
 
-// Example of how to potentially use a more specific type for setting preferences,
-// although `ActorPreference[]` should generally work if the objects in the array are correct.
-// export const setTypedPreferences = async (agent: BskyAgent, preferences: Array<SavedFeedsPref | PersonalDetailsPref /* | other specific preference types */>): Promise<void> => {
-//   try {
-//     // The actual input type for putPreferences is { preferences: AppBskyActorDefs.Preference[] }
-//     // So, casting to `any` or ensuring the structures are compatible is needed if using very specific subtypes here.
-//     // However, `ActorPreference` itself is a union of all specific preference types, so it should be fine.
-//     await agent.app.bsky.actor.putPreferences({ preferences: preferences as AppBskyActorDefs.Preference[] });
-//   } catch (error) {
-//     console.error("Error setting typed preferences:", error);
-//     throw error;
-//   }
-// };
-
-// It might also be useful to have functions for specific preferences, e.g., saving feeds:
-/**
- * Updates the saved feeds preference.
- * @param agent Initialized BskyAgent
- * @param pinned Array of feed generator URIs to pin.
- * @param saved Array of feed generator URIs to save.
- */
-export const updateSavedFeedsPreference = async (agent: BskyAgent, pinned: string[], saved: string[]): Promise<void> => {
-    try {
-        const currentPrefs = await getPreferences(agent);
-
-        const otherPrefs = currentPrefs.filter(p => p.$type !== 'app.bsky.actor.defs#savedFeeds');
-
-        const newSavedFeedsPref: SavedFeedsPref = {
-            $type: 'app.bsky.actor.defs#savedFeeds', // Make sure this string is correct
-            pinned: pinned,
-            saved: saved,
-        };
-
-        await setPreferences(agent, [...otherPrefs, newSavedFeedsPref]);
-    } catch (error) {
-        console.error("Error updating saved feeds preference:", error);
-        throw error;
-    }
-};
-
-/**
- * Updates parts of the authenticated user's profile.
- * @param agent Initialized BskyAgent
- * @param updates An object containing parts of the profile to update (e.g., { languages: ['en', 'fr'] })
- * @returns The server's response to the profile update.
- */
-export const updateProfileDetails = async (
+// Profile update functions
+export const updateProfile = async (
   agent: BskyAgent,
-  updates: Partial<Pick<AppBskyActorDefs.ProfileViewDetailed, 'languages' | 'displayName' | 'description' | 'avatar' | 'banner'>>
-): Promise<AppBskyActorDefs.ProfileViewDetailed> => { // Using ProfileViewDetailed for return type consistency, though upsertProfile returns a basic { uri, cid } on success usually.
-                                                    // The actual profile data might need re-fetching if full updated view is needed immediately.
+  updates: Partial<{
+    displayName?: string;
+    description?: string;
+    avatar?: Blob;
+    banner?: Blob;
+  }>
+): Promise<{ uri: string; cid: string }> => {
   try {
-    // agent.upsertProfile returns { uri: string, cid: string }
-    // It takes a callback that receives the existing profile (or undefined if new)
-    // and should return the profile object to be saved.
-    const response = await agent.upsertProfile(existing => {
-      const newProfile: any = { ...existing, ...updates };
-      // Ensure specific fields that are not part of standard ProfileViewBasic but are in ProfileViewDetailed
-      // are handled correctly or omitted if they shouldn't be directly upserted.
-      // For example, `did`, `handle` are immutable here. `viewer` state is also not part of the upsert.
-      // `labels` are also set via different methods.
-      // We are only interested in `languages`, `displayName`, `description`, `avatar`, `banner` for this function.
+    const response = await agent.upsertProfile(async (existing) => {
+      const newProfile: any = { ...existing };
 
-      // Clean up fields that are not part of the upsert schema for profile
-      // This is a simplified version. A more robust version would strictly pick known mutable fields.
-      delete newProfile.did;
-      delete newProfile.handle;
-      delete newProfile.viewer;
-      delete newProfile.labels;
-      delete newProfile.indexedAt; // Should not be part of an upsert
+      if (updates.displayName !== undefined) {
+        newProfile.displayName = updates.displayName;
+      }
+
+      if (updates.description !== undefined) {
+        newProfile.description = updates.description;
+      }
+
+      if (updates.avatar) {
+        const { data } = await agent.uploadBlob(updates.avatar, { encoding: 'image/jpeg' });
+        newProfile.avatar = data.blob;
+      }
+
+      if (updates.banner) {
+        const { data } = await agent.uploadBlob(updates.banner, { encoding: 'image/jpeg' });
+        newProfile.banner = data.blob;
+      }
 
       return newProfile;
     });
-
-    // After upserting, the response typically just contains uri and cid.
-    // To return the full updated profile, we might need to call getProfile again.
-    // For now, let's return a conceptual success or the partial update.
-    // Or, more practically, the calling function should re-fetch profile if it needs the latest full view.
-    console.log("Profile update response (upsertProfile):", response);
-
-    // For consistency with getProfile, let's refetch the profile.
-    // This ensures the returned data is the full, current server state.
-    if (agent.session?.did) { // session should exist if agent is making authenticated calls
-        return getProfile(agent, agent.session.did);
-    } else {
-        // This case should ideally not be reached if agent is properly authenticated
-        throw new Error("User session not found, cannot re-fetch profile after update.");
-    }
-
+    return response;
   } catch (error) {
-    console.error("Error updating profile details:", error);
+    console.error("Error updating profile:", error);
     throw error;
   }
 };
 
+// List management functions
+export const createList = async (
+  agent: BskyAgent,
+  name: string,
+  purpose: 'app.bsky.graph.defs#modlist' | 'app.bsky.graph.defs#curatelist',
+  description?: string
+): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.app.bsky.graph.list.create(
+      { repo: agent.session?.did! },
+      {
+        name,
+        purpose,
+        description: description || '',
+        createdAt: new Date().toISOString(),
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error('Error creating list:', error);
+    throw error;
+  }
+};
 
-// Note on getTimeline:
-// The `getTimeline` method in BskyAgent usually fetches the "home" or "following" timeline.
-// To fetch a specific feed generated by a feed generator, `getFeed` is the correct method,
-// using the feed generator's AT URI. The `getTimeline` function above is a basic version
-// and might need adjustment if `algorithm` refers to a feed generator URI.
-// The current implementation of `getTimeline` will fetch the default "Following" timeline.
-// If `feedUri` in the original prompt for `getTimeline` was actually a feed generator URI,
-// then the `getFeed` function I've written is the one to use for that purpose.
-// I've kept `getTimeline` as a general "fetch my main timeline" function.
+export const addToList = async (agent: BskyAgent, listUri: string, subjectDid: string): Promise<{ uri: string; cid: string }> => {
+  try {
+    const { data } = await agent.app.bsky.graph.listitem.create(
+      { repo: agent.session?.did! },
+      {
+        subject: subjectDid,
+        list: listUri,
+        createdAt: new Date().toISOString(),
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error(`Error adding ${subjectDid} to list ${listUri}:`, error);
+    throw error;
+  }
+};
 
-// Note on AppBskyActorPreferences: (This note can be removed as the import is now removed)
-// The import `AppBskyActorPreferences` was in the prompt but `AppBskyActorDefs.Preference` and
-// specific preference types like `AppBskyActorDefs.SavedFeedsPref` are generally used from `@atproto/api`.
-// `AppBskyActorDefs.Preferences` is the type for the response object of `getPreferences`, which is `{ preferences: AppBskyActorDefs.Preference[] }`.
-// I've used `AppBskyActorDefs.Preference` for individual preference items.
+export const removeFromList = async (agent: BskyAgent, listItemUri: string): Promise<void> => {
+  try {
+    const uri = new URL(listItemUri);
+    const rkey = uri.pathname.split('/').pop()!;
+    await agent.app.bsky.graph.listitem.delete({
+      repo: agent.session?.did!,
+      rkey
+    });
+  } catch (error) {
+    console.error(`Error removing from list ${listItemUri}:`, error);
+    throw error;
+  }
+};
 
-// Corrected import (removing AppBskyActorPreferences if not used)
-// import { BskyAgent, AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // This line is now effectively the first line.
+// Report functions
+export const reportPost = async (
+  agent: BskyAgent,
+  postUri: string,
+  postCid: string,
+  reasonType: string,
+  reason?: string
+): Promise<void> => {
+  try {
+    await agent.app.bsky.moderation.createReport({
+      reasonType,
+      reason: reason || '',
+      subject: {
+        $type: 'com.atproto.repo.strongRef',
+        uri: postUri,
+        cid: postCid,
+      },
+    });
+  } catch (error) {
+    console.error(`Error reporting post ${postUri}:`, error);
+    throw error;
+  }
+};
+
+export const reportProfile = async (
+  agent: BskyAgent,
+  did: string,
+  reasonType: string,
+  reason?: string
+): Promise<void> => {
+  try {
+    await agent.app.bsky.moderation.createReport({
+      reasonType,
+      reason: reason || '',
+      subject: {
+        $type: 'com.atproto.admin.defs#repoRef',
+        did,
+      },
+    });
+  } catch (error) {
+    console.error(`Error reporting profile ${did}:`, error);
+    throw error;
+  }
+};
+
+// Upload functions
+export const uploadImage = async (agent: BskyAgent, image: Blob): Promise<{ blob: any }> => {
+  try {
+    const { data } = await agent.uploadBlob(image, { encoding: 'image/jpeg' });
+    return data;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+};
+
+// Session management
+export const refreshSession = async (agent: BskyAgent): Promise<void> => {
+  try {
+    await agent.resumeSession(agent.session!);
+  } catch (error) {
+    console.error('Error refreshing session:', error);
+    throw error;
+  }
+};
+
