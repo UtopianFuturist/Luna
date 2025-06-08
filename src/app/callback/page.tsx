@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/src/contexts/AuthContext'; // Corrected path
+import { useAuth } from '@/contexts/AuthContext';
 
 export const dynamic = 'force-dynamic'; // Ensures dynamic rendering
 

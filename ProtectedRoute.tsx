@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/src/contexts/AuthContext'; // Adjusted path assuming AuthContext is at root src
+import { useAuth } from '@/contexts/AuthContext'; // Adjusted path assuming AuthContext is at root src
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
