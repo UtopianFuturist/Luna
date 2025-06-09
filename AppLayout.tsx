@@ -134,7 +134,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                   className="rounded-full"
                 />
               </button>
-              <UserMenu isOpen={userMenuOpen} onClose={() => setUserMenuOpen(false)} />
+              <UserMenu />
               </div>
             </div>
           </header>
