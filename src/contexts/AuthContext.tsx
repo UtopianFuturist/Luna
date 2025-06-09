@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } else {
               // Attempt to resume session
               // Note: BskyAgent's resumeSession internally calls persistSession on success
-              await initializedAgent.resumeSession(sessionForResumption);
+              await initializedAgent.resumeSession({ did: (parsedJson.did || "forced_did_for_debug"), handle: "forced_handle_for_debug" } as AtpSessionData);
 
               if (initializedAgent.session) {
                 setSession(initializedAgent.session);
