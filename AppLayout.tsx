@@ -6,7 +6,7 @@ import Link from 'next/link'; // Already present, ensure it's used for feeds
 import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe, Hash } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { BrowserAudioContext } from '../contexts/BrowserAudioContext';
+import { BrowserAudioContext } from '@/contexts/BrowserAudioContext';
 import UserMenu from './UserMenu';
 import { getPreferences, getFeedGenerators } from '@/lib/bskyService'; // Service imports
 import type { AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // Type imports
