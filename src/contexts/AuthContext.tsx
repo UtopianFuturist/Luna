@@ -65,21 +65,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           const storedSession = localStorage.getItem('omnisky_session');
           if (storedSession) {
-            let parsedSessionData = JSON.parse(storedSession); // Parse as a flexible type first
+            const parsedJson = JSON.parse(storedSession);
 
-            // Ensure 'active' property exists, defaulting to true if undefined
-            if (typeof parsedSessionData.active === 'undefined') {
-              parsedSessionData.active = true;
-            }
-            // Ensure other potentially required boolean fields exist, defaulting to false
-            if (typeof parsedSessionData.emailConfirmed === 'undefined') {
-              parsedSessionData.emailConfirmed = false;
-            }
-            if (typeof parsedSessionData.emailAuthFactor === 'undefined') {
-              parsedSessionData.emailAuthFactor = false;
-            }
-
-            const sessionForResumption: AtpSessionData = parsedSessionData as AtpSessionData; // Cast after ensuring required fields
+            const sessionForResumption: AtpSessionData = {
+              did: parsedJson.did,
+              handle: parsedJson.handle,
+              email: parsedJson.email, // Optional, will be undefined if not in parsedJson
+              accessJwt: parsedJson.accessJwt,
+              refreshJwt: parsedJson.refreshJwt,
+              active: typeof parsedJson.active === 'boolean' ? parsedJson.active : true,
+              emailConfirmed: typeof parsedJson.emailConfirmed === 'boolean' ? parsedJson.emailConfirmed : false,
+              emailAuthFactor: typeof parsedJson.emailAuthFactor === 'boolean' ? parsedJson.emailAuthFactor : false,
+              status: parsedJson.status, // Optional
+              pdsUrl: parsedJson.pdsUrl, // Optional
+            };
 
             // Attempt to resume session
             // Note: BskyAgent's resumeSession internally calls persistSession on success
