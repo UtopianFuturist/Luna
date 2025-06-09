@@ -65,32 +65,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           const storedSession = localStorage.getItem('omnisky_session');
           if (storedSession) {
-            const parsedJson = JSON.parse(storedSession);
+            const parsedJson: Partial<AtpSessionData> & { did?: any, handle?: any, accessJwt?: any, refreshJwt?: any } = JSON.parse(storedSession);
 
             const sessionForResumption: AtpSessionData = {
-              did: parsedJson.did,
-              handle: parsedJson.handle,
-              email: parsedJson.email, // Optional, will be undefined if not in parsedJson
-              accessJwt: parsedJson.accessJwt,
-              refreshJwt: parsedJson.refreshJwt,
+              did: parsedJson.did || '',
+              handle: parsedJson.handle || '',
+              email: parsedJson.email,
+              accessJwt: parsedJson.accessJwt || '',
+              refreshJwt: parsedJson.refreshJwt || '',
               active: typeof parsedJson.active === 'boolean' ? parsedJson.active : true,
               emailConfirmed: typeof parsedJson.emailConfirmed === 'boolean' ? parsedJson.emailConfirmed : false,
               emailAuthFactor: typeof parsedJson.emailAuthFactor === 'boolean' ? parsedJson.emailAuthFactor : false,
-              status: parsedJson.status, // Optional
-              pdsUrl: parsedJson.pdsUrl, // Optional
+              status: parsedJson.status,
+              pdsUrl: parsedJson.pdsUrl,
             };
 
-            // Attempt to resume session
-            // Note: BskyAgent's resumeSession internally calls persistSession on success
-            await initializedAgent.resumeSession(sessionForResumption);
-
-            if (initializedAgent.session) {
-              setSession(initializedAgent.session);
-              setIsAuthenticated(true);
-            } else {
-              // Session resumption failed (e.g., expired refresh token)
+            if (!sessionForResumption.did || !sessionForResumption.handle || !sessionForResumption.accessJwt) {
+              console.error("Stored session is missing critical fields, clearing.", parsedJson);
               localStorage.removeItem('omnisky_session');
               setIsAuthenticated(false);
+              setError("Invalid session data found. Please log in again.");
+            } else {
+              // Attempt to resume session
+              // Note: BskyAgent's resumeSession internally calls persistSession on success
+              await initializedAgent.resumeSession(sessionForResumption);
+
+              if (initializedAgent.session) {
+                setSession(initializedAgent.session);
+                setIsAuthenticated(true);
+              } else {
+                // Session resumption failed (e.g., expired refresh token)
+                localStorage.removeItem('omnisky_session');
+                setIsAuthenticated(false);
+              }
             }
           } else {
             setIsAuthenticated(false);
