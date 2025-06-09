@@ -18,7 +18,7 @@ interface BrowserAudioContextType {
   currentTime: number; // Current playback time in seconds
 }
 
-const BrowserAudioContext = createContext<BrowserAudioContextType | undefined>(undefined);
+export const BrowserAudioContext = createContext<BrowserAudioContextType | undefined>(undefined);
 
 export const useBrowserAudio = () => {
   const context = useContext(BrowserAudioContext);
