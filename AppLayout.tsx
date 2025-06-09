@@ -7,7 +7,7 @@ import { Menu, Bell, Home, Search, MessageCircle, User, Settings, Globe, Hash } 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { BrowserAudioContext } from '@/contexts/BrowserAudioContext';
-import UserMenu from './UserMenu';
+import UserMenu from '@/components/UserMenu';
 import { getPreferences, getFeedGenerators } from '@/lib/bskyService'; // Service imports
 import type { AppBskyActorDefs, AppBskyFeedDefs } from '@atproto/api'; // Type imports
 
