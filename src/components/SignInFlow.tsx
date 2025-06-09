@@ -61,36 +61,39 @@ const SignInFlow: React.FC = () => {
   };
 
   const renderStep = () => {
-    switch (step) {
-      case 'welcome':
-        return (
-          <WelcomeScreen
-            onSignInClick={handleWelcomeSignIn}
-            onCreateAccountClick={handleWelcomeCreateAccount}
-          />
-        );
-      case 'credentials':
-        return (
-          <CredentialsScreen
-            onBackClick={handleBack}
-            onNextClick={handleCredentialsNext}
-            isLoading={authIsLoading}
-            error={authError}
-          />
-        );
-      case '2fa':
-        return (
-          <TwoFactorScreen
-            onBackClick={handleBack}
-            onNextClick={handleTwoFactorNext}
-            identifier={identifier} // Pass the identifier to display
-            isLoading={authIsLoading}
-            error={authError}
-          />
-        );
-      default:
-        return <WelcomeScreen onSignInClick={handleWelcomeSignIn} onCreateAccountClick={handleWelcomeCreateAccount} />;
-    }
+    // Temporarily bypass switch logic to isolate potential errors
+    return <div>SignInFlow Test Output</div>;
+
+    // switch (step) {
+    //   case 'welcome':
+    //     return (
+    //       <WelcomeScreen
+    //         onSignInClick={handleWelcomeSignIn}
+    //         onCreateAccountClick={handleWelcomeCreateAccount}
+    //       />
+    //     );
+    //   case 'credentials':
+    //     return (
+    //       <CredentialsScreen
+    //         onBackClick={handleBack}
+    //         onNextClick={handleCredentialsNext}
+    //         isLoading={authIsLoading}
+    //         error={authError}
+    //       />
+    //     );
+    //   case '2fa':
+    //     return (
+    //       <TwoFactorScreen
+    //         onBackClick={handleBack}
+    //         onNextClick={handleTwoFactorNext}
+    //         identifier={identifier} // Pass the identifier to display
+    //         isLoading={authIsLoading}
+    //         error={authError}
+    //       />
+    //     );
+    //   default:
+    //     return <WelcomeScreen onSignInClick={handleWelcomeSignIn} onCreateAccountClick={handleWelcomeCreateAccount} />;
+    // }
   };
 
   return (
