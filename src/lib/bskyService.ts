@@ -1,5 +1,5 @@
 // src/lib/bskyService.ts
-import { BskyAgent, AtpSessionData, ComAtprotoServerDefs } from '@atproto/api';
+import { BskyAgent, AtpSessionData, ComAtprotoServerDefs, AppBskyFeedDefs } from '@atproto/api';
 import { FeedViewPost, PostView } from '@atproto/api/dist/client/types/app/bsky/feed/defs';
 import { Notification } from '@atproto/api/dist/client/types/app/bsky/notification/listNotifications';
 import { ActorProfile } from '@atproto/api/dist/client/types/app/bsky/actor/defs';
@@ -187,4 +187,23 @@ export const likeRecord = async (agent: BskyAgent, uri: string, cid: string) => 
 export const repostRecord = async (agent: BskyAgent, uri: string, cid: string) => {
   if (!agent.session) throw new Error("Authentication required.");
   return await agent.repost(uri, cid);
+};
+
+export const getFeedGenerators = async (
+  agent: BskyAgent,
+  feeds: string[] // Array of feed URIs
+): Promise<{ feeds: AppBskyFeedDefs.GeneratorView[] }> => { // Explicit return type for clarity
+  if (!agent.session) {
+    // Or handle public queries if the API supports and it's intended.
+    // For fetching user-specific pinned feeds, session is likely required.
+    throw new Error("Authentication required to get feed generators.");
+  }
+  try {
+    const { data } = await agent.app.bsky.feed.getFeedGenerators({ feeds });
+    return data;
+  } catch (error) {
+    console.error('Error fetching feed generators:', error);
+    // Re-throw or handle as appropriate for your app's error strategy
+    throw error;
+  }
 };
