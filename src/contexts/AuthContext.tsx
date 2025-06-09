@@ -65,10 +65,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           const storedSession = localStorage.getItem('omnisky_session');
           if (storedSession) {
-            const parsedSession: AtpSessionData = JSON.parse(storedSession);
+            let parsedSessionData = JSON.parse(storedSession); // Parse as a flexible type first
+
+            // Ensure 'active' property exists, defaulting to true if undefined
+            if (typeof parsedSessionData.active === 'undefined') {
+              parsedSessionData.active = true;
+            }
+            // Ensure other potentially required boolean fields exist, defaulting to false
+            if (typeof parsedSessionData.emailConfirmed === 'undefined') {
+              parsedSessionData.emailConfirmed = false;
+            }
+            if (typeof parsedSessionData.emailAuthFactor === 'undefined') {
+              parsedSessionData.emailAuthFactor = false;
+            }
+
+            const sessionForResumption: AtpSessionData = parsedSessionData as AtpSessionData; // Cast after ensuring required fields
+
             // Attempt to resume session
             // Note: BskyAgent's resumeSession internally calls persistSession on success
-            await initializedAgent.resumeSession(parsedSession);
+            await initializedAgent.resumeSession(sessionForResumption);
 
             if (initializedAgent.session) {
               setSession(initializedAgent.session);
